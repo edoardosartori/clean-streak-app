@@ -1,0 +1,375 @@
+{
+  "$description": "Design tokens of the Fusion style (Carbon Slate base with cyan accent for state and security). DTCG-inspired format: \"$value\" and \"$type\"; references use the {token.path.format}.",
+  "meta": {
+    "name": "Fusion",
+    "version": "0.3.0",
+    "status": "draft derived from static mockups, to be validated on a real device",
+    "units": {
+      "dimension": "dp",
+      "fontSize": "sp",
+      "duration": "ms"
+    },
+    "colorFormat": "#RRGGBB or #RRGGBBAA (alpha at the end, CSS style). Note: Flutter uses ARGB (0xAARRGGBB), so it must be converted."
+  },
+
+  "primitive": {
+    "color": {
+      "$type": "color",
+      "ink": { "$value": "#07070F" },
+      "inkA45": { "$value": "#07070F73" },
+      "inkA60": { "$value": "#07070F99" },
+      "white": { "$value": "#FFFFFF" },
+      "slate": {
+        "950": { "$value": "#0D0F12" },
+        "900": { "$value": "#151A20" },
+        "850": { "$value": "#1C232B" },
+        "700": { "$value": "#2A333D" },
+        "400": { "$value": "#8B96A3" },
+        "100": { "$value": "#E8ECF1" }
+      },
+      "paper": {
+        "50": { "$value": "#F4F6F9" },
+        "100": { "$value": "#E8ECF1" },
+        "150": { "$value": "#E1E6EC" },
+        "200": { "$value": "#D5DBE3" },
+        "300": { "$value": "#9AA5B1" },
+        "600": { "$value": "#5B6672" },
+        "950": { "$value": "#12161B" }
+      },
+      "blue": {
+        "500": { "$value": "#5B8CFF" },
+        "700": { "$value": "#2F5BD6" }
+      },
+      "cyan": {
+        "400": { "$value": "#00F0FF" },
+        "700": { "$value": "#007C91" },
+        "100": { "$value": "#D6F4F8" },
+        "400a12": { "$value": "#00F0FF1F" }
+      },
+      "amber": {
+        "400": { "$value": "#F5B544" },
+        "700": { "$value": "#A35405" }
+      },
+      "red": {
+        "400": { "$value": "#F0566A" },
+        "600": { "$value": "#D33A4F" }
+      },
+      "green": {
+        "400": { "$value": "#3DD68C" },
+        "700": { "$value": "#0B7F72" }
+      }
+    },
+
+    "font": {
+      "family": {
+        "$type": "fontFamily",
+        "sans": { "$value": "Inter" },
+        "mono": { "$value": "JetBrains Mono" }
+      },
+      "weight": {
+        "$type": "number",
+        "regular": { "$value": 400 },
+        "medium": { "$value": 500 }
+      }
+    },
+
+    "radius": {
+      "$type": "number",
+      "sm": { "$value": 8 },
+      "md": { "$value": 12 },
+      "lg": { "$value": 16 },
+      "xl": { "$value": 24 },
+      "pill": { "$value": 999 }
+    },
+
+    "space": {
+      "$type": "number",
+      "xs": { "$value": 4 },
+      "sm": { "$value": 8 },
+      "md": { "$value": 12 },
+      "lg": { "$value": 16 },
+      "xl": { "$value": 20 },
+      "2xl": { "$value": 24 },
+      "3xl": { "$value": 32 }
+    },
+
+    "motion": {
+      "duration": {
+        "$type": "number",
+        "fast": { "$value": 150 },
+        "normal": { "$value": 220 },
+        "slow": { "$value": 400 }
+      },
+      "easing": {
+        "$type": "cubicBezier",
+        "standard": { "$value": [0.2, 0, 0, 1] }
+      }
+    }
+  },
+
+  "typography": {
+    "$description": "Text styles. Only two weights (400 and 500). Numbers and data always use the mono font.",
+    "titleLarge": {
+      "family": "{primitive.font.family.sans}",
+      "size": 22,
+      "weight": "{primitive.font.weight.medium}",
+      "lineHeight": 28
+    },
+    "body": {
+      "family": "{primitive.font.family.sans}",
+      "size": 16,
+      "weight": "{primitive.font.weight.regular}",
+      "lineHeight": 24
+    },
+    "bodySmall": {
+      "family": "{primitive.font.family.sans}",
+      "size": 14,
+      "weight": "{primitive.font.weight.regular}",
+      "lineHeight": 20
+    },
+    "label": {
+      "family": "{primitive.font.family.sans}",
+      "size": 14,
+      "weight": "{primitive.font.weight.medium}",
+      "lineHeight": 20
+    },
+    "caption": {
+      "family": "{primitive.font.family.mono}",
+      "size": 12,
+      "weight": "{primitive.font.weight.regular}",
+      "lineHeight": 16
+    },
+    "dataMedium": {
+      "family": "{primitive.font.family.mono}",
+      "size": 14,
+      "weight": "{primitive.font.weight.regular}",
+      "lineHeight": 20
+    },
+    "dataDisplay": {
+      "family": "{primitive.font.family.mono}",
+      "size": 24,
+      "weight": "{primitive.font.weight.regular}",
+      "lineHeight": 32
+    }
+  },
+
+  "semantic": {
+    "dark": {
+      "$type": "color",
+      "background": { "$value": "{primitive.color.slate.950}" },
+      "surface": { "$value": "{primitive.color.slate.900}" },
+      "surfaceVariant": { "$value": "{primitive.color.slate.850}" },
+      "border": { "$value": "{primitive.color.slate.700}" },
+      "track": { "$value": "{primitive.color.slate.850}" },
+      "textPrimary": { "$value": "{primitive.color.slate.100}" },
+      "textSecondary": { "$value": "{primitive.color.slate.400}" },
+      "action": {
+        "primary": { "$value": "{primitive.color.blue.500}" },
+        "onPrimary": { "$value": "{primitive.color.white}" }
+      },
+      "state": {
+        "active": { "$value": "{primitive.color.cyan.400}" },
+        "onActive": { "$value": "{primitive.color.ink}" },
+        "activeTint": { "$value": "{primitive.color.cyan.400a12}" }
+      },
+      "accent": {
+        "symbol": { "$value": "{primitive.color.amber.400}" }
+      },
+      "feedback": {
+        "danger": { "$value": "{primitive.color.red.400}" },
+        "success": { "$value": "{primitive.color.green.400}" }
+      },
+      "character": {
+        "letter": { "$value": "{primitive.color.slate.100}" },
+        "digit": { "$value": "{primitive.color.blue.500}" },
+        "symbol": { "$value": "{primitive.color.amber.400}" }
+      },
+      "switch": {
+        "offTrack": { "$value": "{primitive.color.slate.850}" },
+        "offKnob": { "$value": "{primitive.color.slate.400}" },
+        "onKnob": { "$value": "{primitive.color.white}" }
+      },
+      "scrim": { "$value": "{primitive.color.inkA60}" }
+    },
+    "light": {
+      "$type": "color",
+      "background": { "$value": "{primitive.color.paper.50}" },
+      "surface": { "$value": "{primitive.color.white}" },
+      "surfaceVariant": { "$value": "{primitive.color.paper.100}" },
+      "border": { "$value": "{primitive.color.paper.200}" },
+      "track": { "$value": "{primitive.color.paper.150}" },
+      "textPrimary": { "$value": "{primitive.color.paper.950}" },
+      "textSecondary": { "$value": "{primitive.color.paper.600}" },
+      "action": {
+        "primary": { "$value": "{primitive.color.blue.700}" },
+        "onPrimary": { "$value": "{primitive.color.white}" }
+      },
+      "state": {
+        "active": { "$value": "{primitive.color.cyan.700}" },
+        "onActive": { "$value": "{primitive.color.white}" },
+        "activeTint": { "$value": "{primitive.color.cyan.100}" }
+      },
+      "accent": {
+        "symbol": { "$value": "{primitive.color.amber.700}" }
+      },
+      "feedback": {
+        "danger": { "$value": "{primitive.color.red.600}" },
+        "success": { "$value": "{primitive.color.green.700}" }
+      },
+      "character": {
+        "letter": { "$value": "{primitive.color.paper.950}" },
+        "digit": { "$value": "{primitive.color.blue.700}" },
+        "symbol": { "$value": "{primitive.color.amber.700}" }
+      },
+      "switch": {
+        "offTrack": { "$value": "{primitive.color.paper.150}" },
+        "offKnob": { "$value": "{primitive.color.paper.300}" },
+        "onKnob": { "$value": "{primitive.color.white}" }
+      },
+      "scrim": { "$value": "{primitive.color.inkA45}" }
+    }
+  },
+
+  "effect": {
+    "$description": "Dark theme uses a halo around active state elements; light theme uses a softer halo and a subtle fill (activeTint). No true glow in light theme.",
+    "halo": {
+      "width": 6,
+      "opacity": { "dark": 0.18, "light": 0.12 },
+      "color": "{semantic.dark.state.active} | {semantic.light.state.active}"
+    },
+    "elevation": {
+      "dark": "no shadow: depth is provided by surface tone and a subtle border",
+      "light": "soft shadow: color {primitive.color.paper.950} at 8%, blur 12, offset y 2"
+    },
+    "scrim": {
+      "dark": "dialogs sit on ink at 60% ({primitive.color.inkA60}) plus background blur 4; toasts sit on the same ink without blur",
+      "light": "dialogs sit on ink at 45% ({primitive.color.inkA45}) plus background blur 4; toasts sit on the same ink without blur"
+    }
+  },
+
+  "component": {
+    "screen": { "paddingHorizontal": "{primitive.space.xl}" },
+    "card": {
+      "radius": "{primitive.radius.lg}",
+      "borderWidth": 1,
+      "padding": "{primitive.space.lg}"
+    },
+    "button": {
+      "height": 52,
+      "radius": "{primitive.radius.lg}",
+      "gap": "{primitive.space.md}",
+      "primary": {
+        "background": "action.primary",
+        "foreground": "action.onPrimary"
+      },
+      "secondary": {
+        "background": "surfaceVariant",
+        "foreground": "textPrimary",
+        "borderWidth": 1,
+        "borderColor": "border"
+      }
+    },
+    "chip": { "height": 32, "radius": "{primitive.radius.md}" },
+    "badge": {
+      "radius": "{primitive.radius.md}",
+      "background": "state.activeTint",
+      "foreground": "state.active"
+    },
+    "progressSegment": { "height": 6, "radius": 3, "gap": 6 },
+    "switch": {
+      "width": 48,
+      "height": 28,
+      "radius": "{primitive.radius.pill}"
+    },
+    "slider": { "trackHeight": 6, "thumbSize": 24 },
+    "toast": {
+      "$description": "Transient feedback message, centered on screen and slightly above the exact center. Sits on the scrim (effect.scrim, no blur) so the app behind is dimmed. A bottom bar in accent.symbol shows the remaining time before it expires. Adapts to the display: compact on phones, regular on tablets. Tap to dismiss. Implemented in FusionToast.",
+      "radius": { "$value": "{primitive.radius.md}" },
+      "paddingHorizontal": { "$value": "{primitive.space.2xl}" },
+      "paddingVertical": { "$value": "{primitive.space.lg}" },
+      "gap": { "$value": "{primitive.space.lg}" },
+      "iconSize": { "$value": 24 },
+      "iconSizeCompact": { "$value": 20 },
+      "fontSize": { "$value": 18 },
+      "fontSizeCompact": { "$value": 16 },
+      "progressBarHeight": { "$value": 4 },
+      "maxWidthCompact": { "$value": 310 },
+      "maxWidthRegular": { "$value": 420 },
+      "centerOffsetY": { "$value": 24 },
+      "duration": { "$value": 1500 }
+    },
+    "dialog": {
+      "$description": "Modal surface on a scrim (see effect.scrim): ink over the app plus background blur. Adapts to the display like the toast: 310 dp wide on phones, 420 dp on tablets. Implemented in FusionDialog.",
+      "radius": { "$value": "{primitive.radius.lg}" },
+      "padding": { "$value": "{primitive.space.2xl}" },
+      "iconBadgeSize": { "$value": 48 },
+      "iconSize": { "$value": 24 },
+      "titleSize": { "$value": 18 },
+      "messageSize": { "$value": 14 },
+      "maxWidthCompact": { "$value": 310 },
+      "maxWidthRegular": { "$value": 420 },
+      "scrimBlur": { "$value": 4 },
+      "actionGap": { "$value": "{primitive.space.md}" },
+      "destructive": {
+        "background": "feedback.danger",
+        "foreground": "{primitive.color.white}"
+      }
+    }
+  },
+
+  "rules": {
+    "cyan": {
+      "meaning": "Active, ongoing, or protected. Nothing else.",
+      "allowedFor": [
+        "ongoing timer or process",
+        "encryption or protection indicator (badge, lock)",
+        "progress or level indicator (bar or label)",
+        "active state of a feature"
+      ],
+      "forbiddenFor": [
+        "primary buttons (they use action.primary, the blue)",
+        "links, titles, generic borders, decorative icons",
+        "errors or warnings (they use feedback.danger and accent.symbol)"
+      ],
+      "maxElementsPerScreen": 2,
+      "requireTextOrIconAlongside": true,
+      "test": "If cyan is removed, does the user lose state information? If no, the element should not be cyan."
+    },
+    "amber": {
+      "meaning": "Symbols and operators in text.",
+      "allowedFor": ["symbols and operators in text or expressions"],
+      "forbiddenFor": [
+        "lines, dividers, and borders",
+        "buttons",
+        "backgrounds"
+      ],
+      "note": "In light theme, use amber.700 (#A35405): contrast 5.07:1 on #F4F6F9."
+    },
+    "accessibility": {
+      "minContrastNormalText": 4.5,
+      "minContrastLargeTextAndUi": 3,
+      "note": "Light theme contrast ratios were calculated manually and must be verified with a checker before release.",
+      "neverRelyOnColorAlone": true
+    }
+  },
+
+  "implementation": {
+    "$description": "Inventory of the Fusion widgets that already exist. Not real documentation: it records what is implemented (and where) so the apps that share these tokens (pw-generator-app, calc-app) know what is already done and reusable.",
+    "core": {
+      "FusionTokens": "lib/core/theme/fusion_tokens.dart — flat access to the loaded tokens (get, color, dimension, text)",
+      "TokenLoader": "lib/core/theme/token_loader.dart — loads fusion-tokens.json, resolves {references} and parses colors",
+      "FusionTheme / FusionThemeExtension": "lib/core/theme — ThemeData light/dark from the tokens; the extension carries stateActive, characterLetter/Digit/Symbol, success, danger, border, surfaceVariant, track and scrim",
+      "FusionMotion": "lib/core/theme/fusion_motion.dart — shared durations (fast 150 ms, normal 220 ms) and the standard curve",
+      "FusionTokensScope": "lib/core/theme/fusion_tokens_scope.dart — InheritedWidget that exposes FusionTokens below the MaterialApp",
+      "FusionToast": "lib/core/feedback/fusion_toast.dart — transient feedback centered on screen, success/error variants, tap to dismiss, default 1500 ms (component.toast)",
+      "FusionDialog": "lib/core/feedback/fusion_dialog.dart — modal dialog on a blurred scrim (component.dialog); show() for a single action, confirm() for cancel/confirm with a destructive option"
+    },
+    "pw-generator-app": {
+      "PasswordCard": "lib/features/password_generator/presentation/widgets/password_card.dart — password display card (card tokens; optional action widget overlaid top-left)",
+      "StrengthMeter": "lib/features/password_generator/presentation/widgets/strength_meter.dart — segmented strength bar",
+      "OptionSwitchTile": "lib/features/password_generator/presentation/widgets/option_switch_tile.dart — option row with switch",
+      "PortraitLayout": "lib/features/password_generator/presentation/layouts/portrait_layout.dart — vertical UI, single scroll",
+      "LandscapeLayout": "lib/features/password_generator/presentation/layouts/landscape_layout.dart — two columns (password and actions / options card), per-column scroll, maxWidth 900"
+    }
+  }
+}

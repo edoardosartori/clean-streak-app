@@ -1,0 +1,57 @@
+name: clean_streak
+
+description: Sober time application.
+
+publish_to: none
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_localizations:
+    sdk: flutter
+  shared_preferences: ^2.5.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/icon_512.png"
+
+  adaptive_icon_background: "#0D0F12"
+  adaptive_icon_foreground: "assets/icons/adaptive_foreground.png"
+  adaptive_icon_monochrome: "assets/icons/adaptive_monochrome.png"
+
+  min_sdk_android: 34
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/tokens/fusion-tokens.json
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/JetBrainsMono-Medium.ttf
+          weight: 500
