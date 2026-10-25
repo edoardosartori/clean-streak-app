@@ -33,7 +33,7 @@ class PortraitLayout extends StatefulWidget {
   final bool? isDarkMode;
   final VoidCallback? onToggleTheme;
 
-  /// Step 4: injected persistence. Null = the layout still works,
+  /// injected persistence. Null = the layout still works,
   /// it just does not save anything.
   final TrackerRepository? repository;
 
