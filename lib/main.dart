@@ -1,14 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/theme/fusion_tokens.dart';
 import 'core/theme/fusion_tokens_scope.dart';
 import 'core/theme/fusion_theme.dart';
 import 'core/theme/token_loader.dart';
 
+import 'features/data/local/hive_tracker_repository.dart';
+import 'features/data/tracker_repository.dart';
+import 'features/models/tracker.dart';
 import 'features/presentation/pages/main_page.dart';
 
 const String _appTitle = 'Clean Streak';
@@ -22,10 +26,23 @@ Future<void> main() async {
   final FusionTokens tokens = await TokenLoader.load();
   final SharedPreferences preferences = await SharedPreferences.getInstance();
 
+  // local persistence (Hive CE). The box is opened and
+  // loaded before the first frame.
+  await Hive.initFlutter();
+  final Box<Map> trackerBox = await Hive.openBox<Map>(
+    HiveTrackerRepository.boxName,
+  );
+  final TrackerRepository repository = HiveTrackerRepository(
+    box: trackerBox,
+  );
+  final List<Tracker> savedTrackers = await repository.loadTrackers();
+
   runApp(
     App(
       tokens: tokens,
       preferences: preferences,
+      repository: repository,
+      initialTrackers: savedTrackers,
     ),
   );
 }
@@ -35,22 +52,42 @@ class App extends StatefulWidget {
     super.key,
     required this.tokens,
     required this.preferences,
+    required this.repository,
+    required this.initialTrackers,
   });
 
   final FusionTokens tokens;
   final SharedPreferences preferences;
+  final TrackerRepository repository;
+  final List<Tracker> initialTrackers;
 
   @override
   State<App> createState() => _AppState();
 }
 
-class _AppState extends State<App> {
+class _AppState extends State<App> with WidgetsBindingObserver {
   late ThemeMode _themeMode;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _themeMode = _loadThemeMode();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // The controller saves fire-and-forget: on detach we make
+    // sure the last writes reach the disk before the process dies.
+    if (state == AppLifecycleState.detached) {
+      unawaited(Hive.flush());
+    }
   }
 
   ThemeMode _loadThemeMode() {
@@ -131,6 +168,8 @@ class _AppState extends State<App> {
         home: MainPage(
           isDarkMode: _isDarkMode,
           onToggleTheme: toggleTheme,
+          repository: widget.repository,
+          initialTrackers: widget.initialTrackers,
         ),
       ),
     );

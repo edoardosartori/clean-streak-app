@@ -296,12 +296,12 @@ class _EditorViewState extends State<_EditorView> {
                             ],
                           ),
                           _SectionLabel(
-                            label: 'Name (optional)',
+                            label: 'Name',
                             color: secondary,
                           ),
                           TextField(
                             controller: _nameController,
-                            // Max 12 characters (user decision): keeps
+                            // Max 12 characters: keeps
                             // the tab and the hero header tidy.
                             maxLength: 12,
                             textCapitalization: TextCapitalization.sentences,

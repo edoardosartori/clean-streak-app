@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/feedback/fusion_dialog.dart';
 import '../../../core/theme/fusion_motion.dart';
+import '../../data/tracker_repository.dart';
 import '../../domain/streak_calculator.dart';
 import '../../models/tracker.dart';
 import '../state/app_state.dart';
@@ -19,19 +20,32 @@ import '../widgets/tracker_editor_dialog.dart';
 /// hero card and the milestones card. Vertical full view, no
 /// scroll. The hero fills the free height.
 class PortraitLayout extends StatefulWidget {
-  const PortraitLayout({super.key, this.isDarkMode, this.onToggleTheme});
+  const PortraitLayout({
+    super.key,
+    this.isDarkMode,
+    this.onToggleTheme,
+    this.repository,
+    this.initialTrackers = const <Tracker>[],
+  });
 
   /// Theme state is owned by main.dart (same pattern as
   /// pw-generator). Null = the toggle is simply not shown.
   final bool? isDarkMode;
   final VoidCallback? onToggleTheme;
 
+  /// Step 4: injected persistence. Null = the layout still works,
+  /// it just does not save anything.
+  final TrackerRepository? repository;
+
+  /// Trackers loaded at boot, handed down from main.dart.
+  final List<Tracker> initialTrackers;
+
   @override
   State<PortraitLayout> createState() => _PortraitLayoutState();
 }
 
 class _PortraitLayoutState extends State<PortraitLayout> {
-  final TrackerController controller = TrackerController();
+  late final TrackerController controller;
   late final PageController pageController;
 
   /// 1 s UI tick: recomputes breakdown/snapshot live. The controller
@@ -41,6 +55,10 @@ class _PortraitLayoutState extends State<PortraitLayout> {
   @override
   void initState() {
     super.initState();
+    controller = TrackerController(
+      initial: AppState(trackers: widget.initialTrackers),
+      repository: widget.repository,
+    );
     pageController = PageController(initialPage: controller.selectedIndex);
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});

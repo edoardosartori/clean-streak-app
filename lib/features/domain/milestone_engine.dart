@@ -95,7 +95,7 @@ class MilestoneEngine {
 
   /// The first [count] active milestones in the future, chronological.
   /// Used to schedule system + in-app notifications; rescheduled on
-  /// reset / app start / boot (step 4).
+  /// reset / app start / boot.
   List<MilestoneUpcoming> upcoming({
     required DateTime startAt,
     Set<String> disabledMilestones = const {},

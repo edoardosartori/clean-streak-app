@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/fusion_motion.dart';
 import '../../../core/theme/fusion_theme_extension.dart';
 import '../../../core/theme/fusion_tokens_scope.dart';
 import '../../models/tracker.dart';
@@ -12,7 +13,9 @@ import 'timer_glyph.dart';
 /// tab that opens the editor and the theme toggle.
 ///
 /// Long-press on a timer tab opens the editor for that tracker.
-class TopBar extends StatelessWidget {
+/// When the selection changes (also from the swipe below) the
+/// strip auto-scrolls to keep the selected tab in view.
+class TopBar extends StatefulWidget {
   const TopBar({
     super.key,
     required this.controller,
@@ -35,6 +38,55 @@ class TopBar extends StatelessWidget {
   final ValueChanged<Tracker>? onEditTimer;
 
   @override
+  State<TopBar> createState() => _TopBarState();
+}
+
+class _TopBarState extends State<TopBar> {
+  final ScrollController _scrollController = ScrollController();
+
+  /// Attached to whichever chip is currently selected: after a
+  /// selection change the strip scrolls to keep it in view.
+  final GlobalKey _selectedChipKey = GlobalKey(debugLabel: 'selected-tab');
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_revealSelected);
+  }
+
+  @override
+  void didUpdateWidget(TopBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) {
+      oldWidget.controller.removeListener(_revealSelected);
+      widget.controller.addListener(_revealSelected);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_revealSelected);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// The selection changed (swipe or tab tap): after the frame
+  /// the chip with the key is the new selected one, then the
+  /// strip scrolls to it. alignment 0.5 = centered.
+  void _revealSelected() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final BuildContext? chip = _selectedChipKey.currentContext;
+      if (chip == null) return;
+      Scrollable.ensureVisible(
+        chip,
+        duration: FusionMotion.normal,
+        curve: FusionMotion.curve,
+        alignment: 0.5,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final ext = theme.extension<FusionThemeExtension>()!;
@@ -49,40 +101,42 @@ class TopBar extends StatelessWidget {
       children: [
         Expanded(
           child: SingleChildScrollView(
+            controller: _scrollController,
             scrollDirection: Axis.horizontal,
             child: ValueListenableBuilder<AppState>(
-              valueListenable: controller,
+              valueListenable: widget.controller,
               builder: (context, state, _) {
                 return Row(
                   children: [
                     for (int i = 0; i < state.trackers.length; i++) ...[
                       if (i > 0) const SizedBox(width: 8),
                       _TabChip(
+                        key: i == state.selectedIndex ? _selectedChipKey : null,
                         tracker: state.trackers[i],
                         selected: i == state.selectedIndex,
                         activeColor: ext.stateActive,
                         activeTint: ext.stateActiveTint,
                         inactiveColor: secondary,
                         inactiveBackground: ext.surfaceVariant,
-                        onTap: () => controller.select(i),
-                        onLongPress: onEditTimer == null
+                        onTap: () => widget.controller.select(i),
+                        onLongPress: widget.onEditTimer == null
                             ? null
-                            : () => onEditTimer!(state.trackers[i]),
+                            : () => widget.onEditTimer!(state.trackers[i]),
                       ),
                     ],
                     const SizedBox(width: 8),
-                    _AddChip(color: secondary, onTap: onNewTimer),
+                    _AddChip(color: secondary, onTap: widget.onNewTimer),
                   ],
                 );
               },
             ),
           ),
         ),
-        if (onToggleTheme != null && isDarkMode != null) ...[
+        if (widget.onToggleTheme != null && widget.isDarkMode != null) ...[
           const SizedBox(width: 8),
           _ThemeToggle(
-            isDarkMode: isDarkMode!,
-            onTap: onToggleTheme!,
+            isDarkMode: widget.isDarkMode!,
+            onTap: widget.onToggleTheme!,
           ),
         ],
       ],
@@ -92,6 +146,7 @@ class TopBar extends StatelessWidget {
 
 class _TabChip extends StatelessWidget {
   const _TabChip({
+    super.key,
     required this.tracker,
     required this.selected,
     required this.activeColor,
