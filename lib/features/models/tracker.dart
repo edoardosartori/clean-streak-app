@@ -54,12 +54,16 @@ class Tracker {
   /// MilestoneEngine ignores them here by design.
   final Set<String> disabledMilestones;
 
+  /// Sentinel so [copyWith] can set [name] back to null (the
+  /// classic `name ?? this.name` could never clear it).
+  static const Object _unset = Object();
+
   Tracker copyWith({
     String? id,
     TimerGlyphId? glyph,
     HeroScene? scene,
     DateTime? startAt,
-    String? name,
+    Object? name = _unset,
     Set<String>? disabledMilestones,
   }) {
     return Tracker(
@@ -67,7 +71,7 @@ class Tracker {
       glyph: glyph ?? this.glyph,
       scene: scene ?? this.scene,
       startAt: startAt ?? this.startAt,
-      name: name ?? this.name,
+      name: identical(name, _unset) ? this.name : name as String?,
       disabledMilestones: disabledMilestones ?? this.disabledMilestones,
     );
   }
