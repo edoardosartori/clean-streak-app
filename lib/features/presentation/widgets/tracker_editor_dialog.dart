@@ -37,7 +37,7 @@ class TrackerEditorDialog {
   TrackerEditorDialog._();
 
   /// [tracker] is the draft to edit. For a new timer the caller
-  /// builds a default tracker (new id, no icon, peaks, start now)
+  /// builds a default tracker (new id, droplet, peaks, start now)
   /// and passes [isNew]: true = "New timer" title, no delete link.
   static Future<TrackerEditorResult?> show(
     BuildContext context, {
@@ -296,11 +296,14 @@ class _EditorViewState extends State<_EditorView> {
                             ],
                           ),
                           _SectionLabel(
-                            label: 'Name',
+                            label: 'Name (optional)',
                             color: secondary,
                           ),
                           TextField(
                             controller: _nameController,
+                            // Max 12 characters (user decision): keeps
+                            // the tab and the hero header tidy.
+                            maxLength: 12,
                             textCapitalization: TextCapitalization.sentences,
                             textInputAction: TextInputAction.done,
                             style: TextStyle(
@@ -328,6 +331,10 @@ class _EditorViewState extends State<_EditorView> {
                                 borderSide: BorderSide(
                                   color: theme.colorScheme.primary,
                                 ),
+                              ),
+                              counterStyle: TextStyle(
+                                fontSize: 11,
+                                color: secondary.withValues(alpha: 0.55),
                               ),
                             ),
                           ),
