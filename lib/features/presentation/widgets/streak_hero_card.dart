@@ -1,3 +1,5 @@
+// FILE (SOSTITUISCE): lib/features/presentation/widgets/streak_hero_card.dart
+
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -12,6 +14,9 @@ import 'timer_glyph.dart';
 
 /// Hero card of a timer: scene backdrop, "Clean for" calendar
 /// counter (Y/M/D + h/m/s), milestone in focus with progress.
+/// The header row carries the two compact actions: edit (opens
+/// the tracker editor, which in edit mode also offers delete)
+/// and reset.
 ///
 /// The counter block sits on a frosted panel (ink at 45% plus the
 /// dialog scrim blur, both from fusion-tokens.json) so the data
@@ -22,10 +27,17 @@ class StreakHeroCard extends StatelessWidget {
   const StreakHeroCard({
     super.key,
     required this.tracker,
+    required this.onEdit,
     required this.onReset,
   });
 
   final Tracker tracker;
+
+  /// Opens the tracker editor on this timer. The editor runs in
+  /// edit mode, so it also shows the "Delete timer" action.
+  final VoidCallback onEdit;
+
+  /// Resets the streak (the caller asks for confirmation first).
   final VoidCallback onReset;
 
   @override
@@ -126,7 +138,17 @@ class StreakHeroCard extends StatelessWidget {
                                   ),
                                 ),
                         ),
-                        _ResetButton(onTap: onReset),
+                        _HeaderButton(
+                          icon: Icons.edit_rounded,
+                          tooltip: 'Edit timer',
+                          onTap: onEdit,
+                        ),
+                        const SizedBox(width: 8),
+                        _HeaderButton(
+                          icon: Icons.refresh_rounded,
+                          tooltip: 'Reset timer',
+                          onTap: onReset,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -345,9 +367,17 @@ class StreakHeroCard extends StatelessWidget {
       s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
 }
 
-class _ResetButton extends StatelessWidget {
-  const _ResetButton({required this.onTap});
+/// Compact 36x36 action button of the hero header: frosted white
+/// tile, white icon. Used for the edit and the reset actions.
+class _HeaderButton extends StatelessWidget {
+  const _HeaderButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
 
+  final IconData icon;
+  final String tooltip;
   final VoidCallback onTap;
 
   @override
@@ -361,9 +391,10 @@ class _ResetButton extends StatelessWidget {
       ),
       child: IconButton(
         padding: EdgeInsets.zero,
+        tooltip: tooltip,
         onPressed: onTap,
         icon: Icon(
-          Icons.refresh_rounded,
+          icon,
           size: 18,
           color: Colors.white.withValues(alpha: 0.92),
         ),

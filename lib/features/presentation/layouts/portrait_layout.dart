@@ -165,6 +165,7 @@ class _PortraitLayoutState extends State<PortraitLayout> {
                               Expanded(
                                 child: StreakHeroCard(
                                   tracker: tracker,
+                                  onEdit: () => _openEditor(isNew: false),
                                   onReset: () => _confirmReset(tracker),
                                 ),
                               ),
