@@ -8,7 +8,7 @@ import 'core/theme/fusion_tokens.dart';
 import 'core/theme/fusion_theme.dart';
 import 'core/theme/token_loader.dart';
 
-import 'features/clean_streak/presentation/pages/main_page.dart';
+import 'features/presentation/pages/main_page.dart';
 
 const String _appTitle = 'Clean Streak';
 const String _themeModePreferenceKey = 'theme_mode';
@@ -103,9 +103,8 @@ class _AppState extends State<App> {
   }
 
   void _updateSystemUiOverlay() {
-    final Brightness iconBrightness = _isDarkMode
-        ? Brightness.light
-        : Brightness.dark;
+    final Brightness iconBrightness =
+        _isDarkMode ? Brightness.light : Brightness.dark;
 
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
