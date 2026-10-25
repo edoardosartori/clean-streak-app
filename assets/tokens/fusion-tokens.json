@@ -371,5 +371,103 @@
       "PortraitLayout": "lib/features/password_generator/presentation/layouts/portrait_layout.dart — vertical UI, single scroll",
       "LandscapeLayout": "lib/features/password_generator/presentation/layouts/landscape_layout.dart — two columns (password and actions / options card), per-column scroll, maxWidth 900"
     }
+  },
+  "scene": {
+    "peaks": {
+      "dark": {
+        "skyTop": { "$value": "#0D0F12" },
+        "skyMid": { "$value": "#1C232B" },
+        "skyBottom": { "$value": "#2F5BD6" }
+      },
+      "light": {
+        "skyTop": { "$value": "#2F5BD6" },
+        "skyMid": { "$value": "#5B8CFF" },
+        "skyBottom": { "$value": "#F5B544" }
+      }
+    },
+    "ocean": {
+      "dark": {
+        "skyTop": { "$value": "#0D0F12" },
+        "skyMid": { "$value": "#0A4A56" },
+        "skyBottom": { "$value": "#007C91" }
+      },
+      "light": {
+        "skyTop": { "$value": "#5B8CFF" },
+        "skyMid": { "$value": "#9BC1F8" },
+        "skyBottom": { "$value": "#D6F4F8" }
+      }
+    },
+    "forest": {
+      "dark": {
+        "skyTop": { "$value": "#0D0F12" },
+        "skyMid": { "$value": "#063F38" },
+        "skyBottom": { "$value": "#0B7F72" }
+      },
+      "light": {
+        "skyTop": { "$value": "#D6F4F8" },
+        "skyMid": { "$value": "#8FE2C2" },
+        "skyBottom": { "$value": "#3DD68C" }
+      }
+    },
+    "city": {
+      "dark": {
+        "skyTop": { "$value": "#07070F" },
+        "skyMid": { "$value": "#171B26" },
+        "skyBottom": { "$value": "#2A333D" }
+      },
+      "light": {
+        "skyTop": { "$value": "#8B96A3" },
+        "skyMid": { "$value": "#B9C1CC" },
+        "skyBottom": { "$value": "#E8ECF1" }
+      }
+    },
+    "desert": {
+      "dark": {
+        "skyTop": { "$value": "#0D0F12" },
+        "skyMid": { "$value": "#5A3105" },
+        "skyBottom": { "$value": "#A35405" }
+      },
+      "light": {
+        "skyTop": { "$value": "#5B8CFF" },
+        "skyMid": { "$value": "#A89B52" },
+        "skyBottom": { "$value": "#F5B544" }
+      }
+    },
+    "lake": {
+      "dark": {
+        "skyTop": { "$value": "#07070F" },
+        "skyMid": { "$value": "#12161C" },
+        "skyBottom": { "$value": "#1C232B" }
+      },
+      "light": {
+        "skyTop": { "$value": "#5B8CFF" },
+        "skyMid": { "$value": "#9BC1F8" },
+        "skyBottom": { "$value": "#D6F4F8" }
+      }
+    },
+    "snow": {
+      "dark": {
+        "skyTop": { "$value": "#07070F" },
+        "skyMid": { "$value": "#1A2230" },
+        "skyBottom": { "$value": "#2A333D" }
+      },
+      "light": {
+        "skyTop": { "$value": "#8B96A3" },
+        "skyMid": { "$value": "#C4CBD6" },
+        "skyBottom": { "$value": "#E8ECF1" }
+      }
+    },
+    "aurora": {
+      "dark": {
+        "skyTop": { "$value": "#07070F" },
+        "skyMid": { "$value": "#0C1524" },
+        "skyBottom": { "$value": "#0D0F12" }
+      },
+      "light": {
+        "skyTop": { "$value": "#F4F6F9" },
+        "skyMid": { "$value": "#E6EBEF" },
+        "skyBottom": { "$value": "#D6F4F8" }
+      }
+    }
   }
 }

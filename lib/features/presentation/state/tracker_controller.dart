@@ -1,15 +1,30 @@
 import 'package:flutter/foundation.dart';
 
-/// Placeholder controller for step 1: only the selected tab index.
-/// Step 2 adds the domain layer (StreakCalculator, MilestoneEngine) and the
-/// real AppState; step 3 wires it to the PageView of the timer tabs.
-class TrackerController extends ValueNotifier<int> {
-  TrackerController({int initialIndex = 0}) : super(initialIndex);
+import '../../models/tracker.dart';
+import 'app_state.dart';
 
-  /// Index of the timer currently visible in the swipeable tabs.
-  int get selectedIndex => value;
+/// Owns the app state (ValueNotifier, suite convention).
+///
+/// The 1 s UI tick lives in the layout, not here: the controller
+/// changes only when the data changes (tab selection, reset,
+/// editor — step 3c).
+class TrackerController extends ValueNotifier<AppState> {
+  TrackerController({AppState? initial}) : super(initial ?? seedAppState());
+
+  int get selectedIndex => value.selectedIndex;
 
   void select(int index) {
-    if (index != value) value = index;
+    if (index != value.selectedIndex) {
+      value = value.copyWith(selectedIndex: index);
+    }
+  }
+
+  /// Restarts the streak of the selected timer from now.
+  /// The UI confirms with FusionDialog (destructive) before calling.
+  void resetSelected() {
+    final List<Tracker> trackers = List<Tracker>.of(value.trackers);
+    final int i = value.selectedIndex.clamp(0, trackers.length - 1);
+    trackers[i] = trackers[i].copyWith(startAt: DateTime.now());
+    value = value.copyWith(trackers: trackers);
   }
 }

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 
 import 'core/theme/fusion_tokens.dart';
+import 'core/theme/fusion_tokens_scope.dart';
 import 'core/theme/fusion_theme.dart';
 import 'core/theme/token_loader.dart';
 
@@ -25,7 +26,6 @@ Future<void> main() async {
     App(
       tokens: tokens,
       preferences: preferences,
-      initialPage: const MainPage(),
     ),
   );
 }
@@ -35,12 +35,10 @@ class App extends StatefulWidget {
     super.key,
     required this.tokens,
     required this.preferences,
-    required this.initialPage,
   });
 
   final FusionTokens tokens;
   final SharedPreferences preferences;
-  final Widget initialPage;
 
   @override
   State<App> createState() => _AppState();
@@ -122,13 +120,19 @@ class _AppState extends State<App> {
   Widget build(BuildContext context) {
     _updateSystemUiOverlay();
 
-    return MaterialApp(
-      title: _appTitle,
-      debugShowCheckedModeBanner: false,
-      theme: FusionTheme.light(widget.tokens),
-      darkTheme: FusionTheme.dark(widget.tokens),
-      themeMode: _themeMode,
-      home: widget.initialPage,
+    return FusionTokensScope(
+      tokens: widget.tokens,
+      child: MaterialApp(
+        title: _appTitle,
+        debugShowCheckedModeBanner: false,
+        theme: FusionTheme.light(widget.tokens),
+        darkTheme: FusionTheme.dark(widget.tokens),
+        themeMode: _themeMode,
+        home: MainPage(
+          isDarkMode: _isDarkMode,
+          onToggleTheme: toggleTheme,
+        ),
+      ),
     );
   }
 }

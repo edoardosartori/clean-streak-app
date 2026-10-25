@@ -2,11 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'portrait_layout.dart';
 
-/// Stub for step 1: the dedicated landscape layout arrives with the real
-/// UI in step 3. Same pattern used by pw-generator-app at the beginning.
+/// Still a stub: the dedicated landscape layout arrives with the UI
+/// refinement pass (same pattern as the other apps of the suite).
 class LandscapeLayout extends StatelessWidget {
-  const LandscapeLayout({super.key});
+  const LandscapeLayout({super.key, this.isDarkMode, this.onToggleTheme});
+
+  final bool? isDarkMode;
+  final VoidCallback? onToggleTheme;
 
   @override
-  Widget build(BuildContext context) => const PortraitLayout();
+  Widget build(BuildContext context) {
+    return PortraitLayout(
+      isDarkMode: isDarkMode,
+      onToggleTheme: onToggleTheme,
+    );
+  }
 }
