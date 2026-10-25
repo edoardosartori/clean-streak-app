@@ -99,9 +99,13 @@ class _PortraitLayoutState extends State<PortraitLayout> {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          StreakHeroCard(
-                            tracker: tracker,
-                            onReset: () => _confirmReset(tracker),
+                          // The hero takes all the free height; the
+                          // milestones card keeps its own size.
+                          Expanded(
+                            child: StreakHeroCard(
+                              tracker: tracker,
+                              onReset: () => _confirmReset(tracker),
+                            ),
                           ),
                           const SizedBox(height: 16),
                           MilestoneCard(tracker: tracker),

@@ -19,6 +19,7 @@
       "inkA45": { "$value": "#07070F73" },
       "inkA60": { "$value": "#07070F99" },
       "white": { "$value": "#FFFFFF" },
+      "warmWhite": { "$value": "#FFF6E0" },
       "slate": {
         "950": { "$value": "#0D0F12" },
         "900": { "$value": "#151A20" },
