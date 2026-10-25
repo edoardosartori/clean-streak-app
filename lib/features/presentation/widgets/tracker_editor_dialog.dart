@@ -37,7 +37,7 @@ class TrackerEditorDialog {
   TrackerEditorDialog._();
 
   /// [tracker] is the draft to edit. For a new timer the caller
-  /// builds a default tracker (new id, droplet, peaks, start now)
+  /// builds a default tracker (new id, no icon, peaks, start now)
   /// and passes [isNew]: true = "New timer" title, no delete link.
   static Future<TrackerEditorResult?> show(
     BuildContext context, {
@@ -88,7 +88,9 @@ class _EditorView extends StatefulWidget {
 
 class _EditorViewState extends State<_EditorView> {
   late final TextEditingController _nameController;
-  late TimerGlyphId _glyph;
+
+  /// Null = no icon: the timer shows the name only.
+  late TimerGlyphId? _glyph;
   late HeroScene _scene;
   late Set<String> _disabled;
   late DateTime _startAt;
@@ -286,10 +288,15 @@ class _EditorViewState extends State<_EditorView> {
                                   selected: id == _glyph,
                                   onTap: () => setState(() => _glyph = id),
                                 ),
+                              // "No icon": the timer can live without one.
+                              _NoIconTile(
+                                selected: _glyph == null,
+                                onTap: () => setState(() => _glyph = null),
+                              ),
                             ],
                           ),
                           _SectionLabel(
-                            label: 'Name (optional)',
+                            label: 'Name',
                             color: secondary,
                           ),
                           TextField(
@@ -478,8 +485,11 @@ class _IconTile extends StatelessWidget {
       isDark ? 'semantic.dark.textSecondary' : 'semantic.light.textSecondary',
     );
 
+    // No placeholder box around the unchosen icons: they are just
+    // the gray glyph on the dialog surface. Only the selection
+    // gets the cyan tint (mockup v0.3.4 "pick.sel").
     return Material(
-      color: selected ? ext.stateActiveTint : ext.surfaceVariant,
+      color: selected ? ext.stateActiveTint : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -492,6 +502,52 @@ class _IconTile extends StatelessWidget {
               id: id,
               size: 20,
               color: selected ? ext.stateActive : secondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The "no icon" option of the picker: dashed tile (suite "off"
+/// style, like the "+" tab) unless selected, then it takes the
+/// same cyan tint as a regular selected icon.
+class _NoIconTile extends StatelessWidget {
+  const _NoIconTile({required this.selected, required this.onTap});
+
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = theme.extension<FusionThemeExtension>()!;
+    final tokens = FusionTokensScope.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    final Color secondary = tokens.color(
+      isDark ? 'semantic.dark.textSecondary' : 'semantic.light.textSecondary',
+    );
+
+    return CustomPaint(
+      foregroundPainter:
+          selected ? null : DashedRoundedRectPainter(color: ext.border),
+      child: Material(
+        color: selected ? ext.stateActiveTint : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Center(
+              child: Icon(
+                Icons.block_rounded,
+                size: 18,
+                color: selected ? ext.stateActive : secondary,
+              ),
             ),
           ),
         ),

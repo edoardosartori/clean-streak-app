@@ -31,7 +31,7 @@ enum HeroScene { peaks, ocean, forest, city, desert, lake, snow, aurora }
 class Tracker {
   const Tracker({
     required this.id,
-    required this.glyph,
+    this.glyph,
     required this.scene,
     required this.startAt,
     this.name,
@@ -39,7 +39,11 @@ class Tracker {
   });
 
   final String id;
-  final TimerGlyphId glyph;
+
+  /// Optional glyph: a timer can have no icon at all. Without an
+  /// icon the tab and the hero show the name only (and a generic
+  /// "Timer" label when the name is missing too).
+  final TimerGlyphId? glyph;
   final HeroScene scene;
 
   /// Optional label: without a name only the glyph is shown
@@ -54,13 +58,13 @@ class Tracker {
   /// MilestoneEngine ignores them here by design.
   final Set<String> disabledMilestones;
 
-  /// Sentinel so [copyWith] can set [name] back to null (the
-  /// classic `name ?? this.name` could never clear it).
+  /// Sentinels so [copyWith] can set [name] and [glyph] back to
+  /// null (the classic `x ?? this.x` could never clear them).
   static const Object _unset = Object();
 
   Tracker copyWith({
     String? id,
-    TimerGlyphId? glyph,
+    Object? glyph = _unset,
     HeroScene? scene,
     DateTime? startAt,
     Object? name = _unset,
@@ -68,7 +72,7 @@ class Tracker {
   }) {
     return Tracker(
       id: id ?? this.id,
-      glyph: glyph ?? this.glyph,
+      glyph: identical(glyph, _unset) ? this.glyph : glyph as TimerGlyphId?,
       scene: scene ?? this.scene,
       startAt: startAt ?? this.startAt,
       name: identical(name, _unset) ? this.name : name as String?,

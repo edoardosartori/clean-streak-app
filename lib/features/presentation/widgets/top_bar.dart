@@ -115,6 +115,11 @@ class _TabChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color fg = selected ? activeColor : inactiveColor;
 
+    // No icon: the chip falls back to the name, or to a generic
+    // "Timer" label when both are missing (never an empty chip).
+    final TimerGlyphId? glyph = tracker.glyph;
+    final String? label = tracker.name ?? (glyph == null ? 'Timer' : null);
+
     return Material(
       color: selected ? activeTint : inactiveBackground,
       borderRadius: BorderRadius.circular(12),
@@ -127,11 +132,11 @@ class _TabChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TimerGlyph(id: tracker.glyph, size: 18, color: fg),
-              if (tracker.name != null) ...[
-                const SizedBox(width: 6),
+              if (glyph != null) TimerGlyph(id: glyph, size: 18, color: fg),
+              if (label != null) ...[
+                if (glyph != null) const SizedBox(width: 6),
                 Text(
-                  tracker.name!,
+                  label,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,

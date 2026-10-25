@@ -120,12 +120,16 @@ class StreakHeroCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        TimerGlyph(
-                          id: tracker.glyph,
-                          size: 20,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 8),
+                        // Optional glyph: a timer without an icon
+                        // shows the name only (never a placeholder).
+                        if (tracker.glyph != null) ...[
+                          TimerGlyph(
+                            id: tracker.glyph!,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         Expanded(
                           child: tracker.name == null
                               ? const SizedBox.shrink()
