@@ -12,6 +12,7 @@ import '../state/app_state.dart';
 import '../state/tracker_controller.dart';
 import '../widgets/empty_trackers.dart';
 import '../widgets/milestone_card.dart';
+import '../widgets/milestone_celebrations.dart';
 import '../widgets/streak_hero_card.dart';
 import '../widgets/top_bar.dart';
 import '../widgets/tracker_editor_dialog.dart';
@@ -46,10 +47,12 @@ class PortraitLayout extends StatefulWidget {
 
 class _PortraitLayoutState extends State<PortraitLayout> {
   late final TrackerController controller;
+  late final MilestoneCelebrationQueue celebrations;
   late final PageController pageController;
 
-  /// 1 s UI tick: recomputes breakdown/snapshot live. The controller
-  /// is untouched — the data changes only on select/reset/editor.
+  /// 1 s UI tick: recomputes breakdown/snapshot live and checks
+  /// for milestones to celebrate. The controller changes only on
+  /// select/reset/editor/celebration marking.
   Timer? _ticker;
 
   @override
@@ -59,20 +62,48 @@ class _PortraitLayoutState extends State<PortraitLayout> {
       initial: AppState(trackers: widget.initialTrackers),
       repository: widget.repository,
     );
+    celebrations = MilestoneCelebrationQueue(
+      onMarkCelebrated: controller.updateTracker,
+    );
     pageController = PageController(initialPage: controller.selectedIndex);
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (mounted) {
+        _scanCelebrations();
+        setState(() {});
+      }
     });
     controller.addListener(_syncPage);
+    celebrations.addListener(_onCelebrationsChanged);
+    // First scan after the first frame: the home shows up, then
+    // the celebrations of everything reached while away.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _scanCelebrations();
+      }
+    });
   }
 
   @override
   void dispose() {
     _ticker?.cancel();
     controller.removeListener(_syncPage);
+    celebrations.removeListener(_onCelebrationsChanged);
     controller.dispose();
+    celebrations.dispose();
     pageController.dispose();
     super.dispose();
+  }
+
+  /// Celebration check (boot + every tick): queues one sheet per
+  /// newly reached, un-celebrated milestone of every card.
+  void _scanCelebrations() {
+    celebrations.scan(controller.value.trackers);
+  }
+
+  void _onCelebrationsChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   /// Tab tap -> animate the PageView to the selection.
@@ -145,60 +176,68 @@ class _PortraitLayoutState extends State<PortraitLayout> {
       value: systemOverlayStyleFor(theme.brightness),
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 12),
-                TopBar(
-                  controller: controller,
-                  isDarkMode: widget.isDarkMode,
-                  onToggleTheme: widget.onToggleTheme,
-                  onNewTimer: () => _openEditor(isNew: true),
-                  onEditTimer: (tracker) => _openEditor(isNew: false),
-                ),
-                const SizedBox(height: 14),
-                Expanded(
-                  child: ValueListenableBuilder<AppState>(
-                    valueListenable: controller,
-                    builder: (context, state, _) {
-                      if (state.trackers.isEmpty) {
-                        return EmptyTrackers(
-                          onNewTimer: () => _openEditor(isNew: true),
-                        );
-                      }
-                      return PageView.builder(
-                        controller: pageController,
-                        itemCount: state.trackers.length,
-                        onPageChanged: controller.select,
-                        itemBuilder: (context, index) {
-                          final Tracker tracker = state.trackers[index];
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // The hero takes all the free height; the
-                              // milestones card keeps its own size.
-                              Expanded(
-                                child: StreakHeroCard(
-                                  tracker: tracker,
-                                  onEdit: () => _openEditor(isNew: false),
-                                  onReset: () => _confirmReset(tracker),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              MilestoneCard(tracker: tracker),
-                            ],
+        body: Stack(
+          children: <Widget>[
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const SizedBox(height: 12),
+                    TopBar(
+                      controller: controller,
+                      isDarkMode: widget.isDarkMode,
+                      onToggleTheme: widget.onToggleTheme,
+                      onNewTimer: () => _openEditor(isNew: true),
+                      onEditTimer: (tracker) => _openEditor(isNew: false),
+                    ),
+                    const SizedBox(height: 14),
+                    Expanded(
+                      child: ValueListenableBuilder<AppState>(
+                        valueListenable: controller,
+                        builder: (context, state, _) {
+                          if (state.trackers.isEmpty) {
+                            return EmptyTrackers(
+                              onNewTimer: () => _openEditor(isNew: true),
+                            );
+                          }
+                          return PageView.builder(
+                            controller: pageController,
+                            itemCount: state.trackers.length,
+                            onPageChanged: controller.select,
+                            itemBuilder: (context, index) {
+                              final Tracker tracker = state.trackers[index];
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: <Widget>[
+                                  // The hero takes all the free height; the
+                                  // milestones card keeps its own size.
+                                  Expanded(
+                                    child: StreakHeroCard(
+                                      tracker: tracker,
+                                      onEdit: () => _openEditor(isNew: false),
+                                      onReset: () => _confirmReset(tracker),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  MilestoneCard(tracker: tracker),
+                                ],
+                              );
+                            },
                           );
                         },
-                      );
-                    },
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+            if (celebrations.isShowing)
+              Positioned.fill(
+                child: MilestoneCelebrationOverlay(queue: celebrations),
+              ),
+          ],
         ),
       ),
     );

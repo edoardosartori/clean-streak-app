@@ -35,6 +35,7 @@ void main() {
       scene: HeroScene.peaks,
       startAt: DateTime(2026, 10, 20, 15, 30),
       disabledMilestones: const {'2d'},
+      celebratedMilestones: const {'1d'},
     );
   }
 
@@ -58,6 +59,7 @@ void main() {
     expect(loaded[0].glyph, isNull);
     expect(loaded[1].glyph, TimerGlyphId.cigarette);
     expect(loaded[2].disabledMilestones, {'2d'});
+    expect(loaded[2].celebratedMilestones, {'1d'});
   });
 
   test('saving an edited tracker overwrites in place and keeps order',
@@ -118,6 +120,21 @@ void main() {
     expect(decoded.glyph, isNull);
     expect(decoded.scene, HeroScene.aurora);
     expect(decoded.startAt, DateTime(2026, 1, 2, 3, 4, 5, 678));
+    expect(decoded.disabledMilestones, isEmpty);
+    expect(decoded.celebratedMilestones, isEmpty);
+  });
+
+  test('codec reads records saved before the celebration step', () {
+    // Old records have no 'celebratedMilestones' key: they load
+    // with an empty set (silent migration).
+    final Tracker? decoded = trackerFromMap(<String, dynamic>{
+      'id': 't3',
+      'scene': 'peaks',
+      'startAt': '2026-10-20T15:30:00',
+    });
+
+    expect(decoded, isNotNull);
+    expect(decoded!.celebratedMilestones, isEmpty);
     expect(decoded.disabledMilestones, isEmpty);
   });
 

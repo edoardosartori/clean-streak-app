@@ -5,7 +5,9 @@ import '../../models/tracker.dart';
 /// format: changing them is a migration. The reader stays
 /// defensive on purpose: a malformed record is skipped instead
 /// of crashing the boot; an unknown glyph name degrades to "no
-/// glyph" instead of dropping the whole tracker.
+/// glyph" instead of dropping the whole tracker. Records saved
+/// before the celebration step have no 'celebratedMilestones'
+/// key: they load with an empty set.
 
 Map<String, dynamic> trackerToMap(Tracker tracker) {
   return <String, dynamic>{
@@ -15,6 +17,9 @@ Map<String, dynamic> trackerToMap(Tracker tracker) {
     'scene': tracker.scene.name,
     'startAt': tracker.startAt.toIso8601String(),
     'disabledMilestones': tracker.disabledMilestones.toList(
+      growable: false,
+    ),
+    'celebratedMilestones': tracker.celebratedMilestones.toList(
       growable: false,
     ),
   };
@@ -58,6 +63,12 @@ Tracker? trackerFromMap(Map<dynamic, dynamic> map) {
       if (milestoneId is String) milestoneId,
   };
 
+  final Set<String> celebratedMilestones = <String>{
+    for (final dynamic celebratedId
+        in map['celebratedMilestones'] as List<dynamic>? ?? const <dynamic>[])
+      if (celebratedId is String) celebratedId,
+  };
+
   return Tracker(
     id: id,
     name: name,
@@ -65,5 +76,6 @@ Tracker? trackerFromMap(Map<dynamic, dynamic> map) {
     scene: scene,
     startAt: startAt,
     disabledMilestones: disabledMilestones,
+    celebratedMilestones: celebratedMilestones,
   );
 }

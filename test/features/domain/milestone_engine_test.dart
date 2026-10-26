@@ -124,4 +124,36 @@ void main() {
           u.map((m) => m.definition.id).toList(), ['7d', '1.5y', '2y', '2.5y']);
     });
   });
+
+  group('MilestoneEngine.reached', () {
+    test('four-day streak: 1d, 2d, 3d chronologically', () {
+      final List<MilestoneReached> r = engine.reached(startAt: start, at: now);
+      expect(r.map((m) => m.definition.id).toList(), ['1d', '2d', '3d']);
+      expect(r.first.reachedAt, DateTime(2026, 10, 13, 20, 47));
+      expect(r.last.reachedAt, DateTime(2026, 10, 15, 20, 47));
+    });
+
+    test('nothing reached before the first day', () {
+      expect(
+        engine.reached(
+          startAt: start,
+          at: start.add(const Duration(hours: 12)),
+        ),
+        isEmpty,
+      );
+    });
+
+    test('disabled milestones are skipped, half-years kept', () {
+      // ~700 days in: past 1.5y, not yet 2y.
+      final List<MilestoneReached> r = engine.reached(
+        startAt: start,
+        disabledMilestones: {'2d', '1.5y'},
+        at: DateTime(2028, 9, 11, 20, 47),
+      );
+      final List<String> ids = r.map((m) => m.definition.id).toList();
+      expect(ids.contains('2d'), isFalse);
+      expect(ids.contains('1.5y'), isTrue);
+      expect(ids.last, '1.5y');
+    });
+  });
 }

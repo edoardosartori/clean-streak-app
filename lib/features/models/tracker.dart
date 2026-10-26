@@ -36,6 +36,7 @@ class Tracker {
     required this.startAt,
     this.name,
     this.disabledMilestones = const {},
+    this.celebratedMilestones = const {},
   });
 
   final String id;
@@ -58,6 +59,12 @@ class Tracker {
   /// MilestoneEngine ignores them here by design.
   final Set<String> disabledMilestones;
 
+  /// Milestone ids already celebrated for this timer (celebration
+  /// step). "Celebrated" = already shown in the celebration sheet;
+  /// the controller recomputes the set when the streak start changes
+  /// and when the queue marks a card.
+  final Set<String> celebratedMilestones;
+
   /// Sentinels so [copyWith] can set [name] and [glyph] back to
   /// null (the classic `x ?? this.x` could never clear them).
   static const Object _unset = Object();
@@ -69,6 +76,7 @@ class Tracker {
     DateTime? startAt,
     Object? name = _unset,
     Set<String>? disabledMilestones,
+    Set<String>? celebratedMilestones,
   }) {
     return Tracker(
       id: id ?? this.id,
@@ -77,6 +85,7 @@ class Tracker {
       startAt: startAt ?? this.startAt,
       name: identical(name, _unset) ? this.name : name as String?,
       disabledMilestones: disabledMilestones ?? this.disabledMilestones,
+      celebratedMilestones: celebratedMilestones ?? this.celebratedMilestones,
     );
   }
 }

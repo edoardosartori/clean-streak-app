@@ -48,6 +48,7 @@ class MilestoneSnapshot {
 /// Answers every milestone question the app has:
 /// - snapshot: reached / in progress / next (home card + hero)
 /// - upcoming: the next N active milestones (notification scheduling)
+/// - reached: every active milestone already passed (celebrations)
 ///
 /// Milestones disabled per timer are skipped, EXCEPT the recurring
 /// half-year ones which are always active ([MilestoneDefinition.canDisable]).
@@ -112,6 +113,27 @@ class MilestoneEngine {
       if (target.isAfter(now)) {
         result.add(MilestoneUpcoming(definition: m, targetDate: target));
       }
+    }
+    return result;
+  }
+
+  /// Every active milestone whose target has passed, chronological:
+  /// the celebration step diffs this list against the celebrated
+  /// set of the card to find what to celebrate. Stops at the first
+  /// future milestone (the catalog is chronological).
+  List<MilestoneReached> reached({
+    required DateTime startAt,
+    Set<String> disabledMilestones = const {},
+    DateTime? at,
+  }) {
+    final DateTime now = at ?? clock();
+    final List<MilestoneReached> result = <MilestoneReached>[];
+
+    for (final MilestoneDefinition m in MilestoneCatalog.ordered()) {
+      if (m.canDisable && disabledMilestones.contains(m.id)) continue;
+      final DateTime target = m.targetDateFrom(startAt);
+      if (target.isAfter(now)) break;
+      result.add(MilestoneReached(definition: m, reachedAt: target));
     }
     return result;
   }

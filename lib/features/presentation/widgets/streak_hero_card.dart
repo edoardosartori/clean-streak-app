@@ -180,13 +180,6 @@ class StreakHeroCard extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  'Clean for',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: secondary,
-                                  ),
-                                ),
                                 const SizedBox(height: 8),
                                 _digitsRow(
                                   items: [
@@ -253,16 +246,6 @@ class StreakHeroCard extends StatelessWidget {
                                     color: Colors.white,
                                   ),
                                 ),
-                                if (snapshot.next != null) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Next milestone: ${snapshot.next!.definition.label}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: secondary,
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                           ),

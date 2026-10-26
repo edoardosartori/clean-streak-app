@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../domain/milestone_engine.dart';
 import '../../models/tracker.dart';
 import '../../data/tracker_repository.dart';
 import 'app_state.dart';
@@ -10,7 +11,7 @@ import 'app_state.dart';
 ///
 /// The 1 s UI tick lives in the layout, not here: the controller
 /// changes only when the data changes (tab selection, reset,
-/// editor, add/delete).
+/// editor, add/delete, celebration marks).
 ///
 /// Persistence: when a [TrackerRepository] is injected,
 /// every data mutation is mirrored to it, fire-and-forget (Hive
@@ -43,10 +44,12 @@ class TrackerController extends ValueNotifier<AppState> {
     }
     final List<Tracker> trackers = List<Tracker>.of(value.trackers);
     final int i = value.selectedIndex.clamp(0, trackers.length - 1);
-    final Tracker reset = trackers[i].copyWith(startAt: DateTime.now());
-    trackers[i] = reset;
+    final Tracker stored = _refreshCelebrated(
+      trackers[i].copyWith(startAt: DateTime.now()),
+    );
+    trackers[i] = stored;
     value = value.copyWith(trackers: trackers);
-    _save(reset);
+    _save(stored);
   }
 
   /// Adds a new tracker and selects it.
@@ -55,11 +58,12 @@ class TrackerController extends ValueNotifier<AppState> {
     if (value.trackers.length >= maxTrackers) {
       return false;
     }
+    final Tracker stored = _refreshCelebrated(tracker);
     value = value.copyWith(
-      trackers: [...value.trackers, tracker],
+      trackers: [...value.trackers, stored],
       selectedIndex: value.trackers.length,
     );
-    _save(tracker);
+    _save(stored);
     return true;
   }
 
@@ -70,9 +74,10 @@ class TrackerController extends ValueNotifier<AppState> {
     if (i == -1) {
       return;
     }
-    trackers[i] = tracker;
+    final Tracker stored = _refreshCelebrated(tracker);
+    trackers[i] = stored;
     value = value.copyWith(trackers: trackers);
-    _save(tracker);
+    _save(stored);
   }
 
   /// Removes a tracker and keeps the selection valid.
@@ -91,6 +96,26 @@ class TrackerController extends ValueNotifier<AppState> {
     if (repository != null) {
       unawaited(repository.deleteTracker(id));
     }
+  }
+
+  /// Celebration state maintenance (celebration step):
+  /// "celebrated" = the active milestones already passed at the
+  /// current start. Recomputed on every save because every mutation
+  /// changes it:
+  /// - reset -> empty set: the new streak can celebrate everything
+  /// - relapse in the past -> the already passed milestones are
+  ///   marked celebrated silently (no celebration was watched)
+  /// - milestone (re)enabled after it passed -> silent as well
+  /// - the celebration queue marking a card lands here too
+  Tracker _refreshCelebrated(Tracker tracker) {
+    final Set<String> passed = <String>{
+      for (final MilestoneReached reached in MilestoneEngine().reached(
+        startAt: tracker.startAt,
+        disabledMilestones: tracker.disabledMilestones,
+      ))
+        reached.definition.id,
+    };
+    return tracker.copyWith(celebratedMilestones: passed);
   }
 
   void _save(Tracker tracker) {
