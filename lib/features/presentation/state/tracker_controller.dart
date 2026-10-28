@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../../domain/milestone_engine.dart';
-import '../../models/tracker.dart';
+import '../../data/notifications/milestone_scheduler.dart';
 import '../../data/tracker_repository.dart';
+import '../../domain/milestone_engine.dart';
+import '../../domain/milestone_notification_planner.dart';
+import '../../models/tracker.dart';
 import 'app_state.dart';
 
 /// Owns the app state (ValueNotifier, suite convention).
@@ -18,15 +20,33 @@ import 'app_state.dart';
 /// writes are readable immediately; the future only covers the
 /// disk flush). The tab selection is NOT persisted (confirmed
 /// decision: the app always restarts on the first tab).
+/// System notifications (step 4d): same mirror pattern. Every
+/// mutation (and the construction itself) re-applies the full
+/// notification plan: deterministic ids make it idempotent, stale
+/// pending notifications are cancelled, milestones that fired
+/// while the app was closed are removed from the tray because the
+/// in-app celebrations cover them.
 class TrackerController extends ValueNotifier<AppState> {
-  TrackerController({AppState? initial, TrackerRepository? repository})
-      : _repository = repository,
-        super(initial ?? const AppState(trackers: []));
+  TrackerController({
+    AppState? initial,
+    TrackerRepository? repository,
+    MilestoneScheduler? scheduler,
+  })  : _repository = repository,
+        _scheduler = scheduler,
+        super(initial ?? const AppState(trackers: [])) {
+    // Boot: plan the loaded cards immediately, so the system knows
+    // about every upcoming milestone even if the app then stays
+    // closed for weeks.
+    _rescheduleNotifications();
+  }
 
   /// Design cap: at most 20 active timers (confirmed decision).
   static const int maxTrackers = 20;
 
   final TrackerRepository? _repository;
+
+  final MilestoneScheduler? _scheduler;
+  final MilestoneNotificationPlanner _planner = MilestoneNotificationPlanner();
 
   int get selectedIndex => value.selectedIndex;
 
@@ -50,6 +70,7 @@ class TrackerController extends ValueNotifier<AppState> {
     trackers[i] = stored;
     value = value.copyWith(trackers: trackers);
     _save(stored);
+    _rescheduleNotifications();
   }
 
   /// Adds a new tracker and selects it.
@@ -64,6 +85,7 @@ class TrackerController extends ValueNotifier<AppState> {
       selectedIndex: value.trackers.length,
     );
     _save(stored);
+    _rescheduleNotifications();
     return true;
   }
 
@@ -78,9 +100,11 @@ class TrackerController extends ValueNotifier<AppState> {
     trackers[i] = stored;
     value = value.copyWith(trackers: trackers);
     _save(stored);
+    _rescheduleNotifications();
   }
 
-  /// Removes a tracker and keeps the selection valid.
+  /// Removes a tracker and keeps the selection valid. The plan
+  /// re-application cancels its pending notifications.
   void deleteTracker(String id) {
     final List<Tracker> trackers = [
       for (final Tracker t in value.trackers)
@@ -96,6 +120,7 @@ class TrackerController extends ValueNotifier<AppState> {
     if (repository != null) {
       unawaited(repository.deleteTracker(id));
     }
+    _rescheduleNotifications();
   }
 
   /// Celebration state maintenance (celebration step):
@@ -116,6 +141,16 @@ class TrackerController extends ValueNotifier<AppState> {
         reached.definition.id,
     };
     return tracker.copyWith(celebratedMilestones: passed);
+  }
+
+  /// System notifications (milestone scheduler step): the plan is
+  /// the full desired state, reapplied on every change.
+  void _rescheduleNotifications() {
+    final MilestoneScheduler? scheduler = _scheduler;
+    if (scheduler == null) {
+      return;
+    }
+    unawaited(scheduler.apply(_planner.planFor(value.trackers)));
   }
 
   void _save(Tracker tracker) {

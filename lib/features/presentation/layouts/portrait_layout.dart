@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/feedback/fusion_dialog.dart';
 import '../../../core/theme/fusion_motion.dart';
+import '../../data/notifications/milestone_scheduler.dart';
 import '../../data/tracker_repository.dart';
 import '../../domain/streak_calculator.dart';
 import '../../models/tracker.dart';
@@ -27,6 +28,8 @@ class PortraitLayout extends StatefulWidget {
     this.onToggleTheme,
     this.repository,
     this.initialTrackers = const <Tracker>[],
+    this.scheduler,
+    this.initialSelectedTrackerId,
   });
 
   /// Theme state is owned by main.dart (same pattern as
@@ -40,6 +43,14 @@ class PortraitLayout extends StatefulWidget {
 
   /// Trackers loaded at boot, handed down from main.dart.
   final List<Tracker> initialTrackers;
+
+  /// System milestone notifications (step 4d). Null = no
+  /// notifications, everything else keeps working.
+  final MilestoneScheduler? scheduler;
+
+  /// Card to open at boot when the app was launched by tapping a
+  /// milestone notification (cold start).
+  final String? initialSelectedTrackerId;
 
   @override
   State<PortraitLayout> createState() => _PortraitLayoutState();
@@ -61,11 +72,20 @@ class _PortraitLayoutState extends State<PortraitLayout> {
     controller = TrackerController(
       initial: AppState(trackers: widget.initialTrackers),
       repository: widget.repository,
+      scheduler: widget.scheduler,
     );
     celebrations = MilestoneCelebrationQueue(
       onMarkCelebrated: controller.updateTracker,
     );
+    // Cold start from a tapped notification: the home opens on
+    // that card before the PageView exists, so no jump is needed.
+    if (widget.initialSelectedTrackerId != null) {
+      _selectTrackerById(widget.initialSelectedTrackerId!);
+    }
     pageController = PageController(initialPage: controller.selectedIndex);
+    // Taps while the app is running (foreground or background)
+    // select the card of the milestone.
+    widget.scheduler?.onTrackerTapped = _selectTrackerById;
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         _scanCelebrations();
@@ -75,16 +95,19 @@ class _PortraitLayoutState extends State<PortraitLayout> {
     controller.addListener(_syncPage);
     celebrations.addListener(_onCelebrationsChanged);
     // First scan after the first frame: the home shows up, then
-    // the celebrations of everything reached while away.
+    // the celebrations of everything reached while away. The
+    // notification permission is asked here too, once ever.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _scanCelebrations();
+        unawaited(widget.scheduler?.requestPermissionIfNeeded());
       }
     });
   }
 
   @override
   void dispose() {
+    widget.scheduler?.onTrackerTapped = null;
     _ticker?.cancel();
     controller.removeListener(_syncPage);
     celebrations.removeListener(_onCelebrationsChanged);
@@ -103,6 +126,19 @@ class _PortraitLayoutState extends State<PortraitLayout> {
   void _onCelebrationsChanged() {
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  /// Selects the card a milestone notification points at (tap
+  /// with the app running, or a cold start launched by a tap).
+  void _selectTrackerById(String trackerId) {
+    if (!mounted) {
+      return;
+    }
+    final int index =
+        controller.value.trackers.indexWhere((Tracker t) => t.id == trackerId);
+    if (index >= 0) {
+      controller.select(index);
     }
   }
 

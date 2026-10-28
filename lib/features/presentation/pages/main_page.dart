@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/notifications/milestone_scheduler.dart';
 import '../../data/tracker_repository.dart';
 import '../../models/tracker.dart';
 import '../layouts/landscape_layout.dart';
@@ -14,6 +15,8 @@ class MainPage extends StatelessWidget {
     this.onToggleTheme,
     this.repository,
     this.initialTrackers = const <Tracker>[],
+    this.scheduler,
+    this.initialSelectedTrackerId,
   });
 
   /// Theme state owned by main.dart (as in pw-generator):
@@ -27,6 +30,12 @@ class MainPage extends StatelessWidget {
   final TrackerRepository? repository;
   final List<Tracker> initialTrackers;
 
+  final MilestoneScheduler? scheduler;
+
+  /// The card to open when the app was launched by tapping a
+  /// milestone notification (cold start).
+  final String? initialSelectedTrackerId;
+
   @override
   Widget build(BuildContext context) {
     return MediaQuery.of(context).orientation == Orientation.landscape
@@ -36,6 +45,8 @@ class MainPage extends StatelessWidget {
             onToggleTheme: onToggleTheme,
             repository: repository,
             initialTrackers: initialTrackers,
+            scheduler: scheduler,
+            initialSelectedTrackerId: initialSelectedTrackerId,
           );
   }
 }

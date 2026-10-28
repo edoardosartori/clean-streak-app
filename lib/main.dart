@@ -11,6 +11,8 @@ import 'core/theme/fusion_theme.dart';
 import 'core/theme/token_loader.dart';
 
 import 'features/data/local/hive_tracker_repository.dart';
+import 'features/data/notifications/flutter_milestone_scheduler.dart';
+import 'features/data/notifications/milestone_scheduler.dart';
 import 'features/data/tracker_repository.dart';
 import 'features/models/tracker.dart';
 import 'features/presentation/pages/main_page.dart';
@@ -26,8 +28,9 @@ Future<void> main() async {
   final FusionTokens tokens = await TokenLoader.load();
   final SharedPreferences preferences = await SharedPreferences.getInstance();
 
-  // local persistence (Hive CE). The box is opened and
-  // loaded before the first frame.
+  // Step 4: local persistence (Hive CE). The box is opened and
+  // loaded before the first frame: the boot shows exactly what
+  // was saved, no seed, no flash of empty content.
   await Hive.initFlutter();
   final Box<Map> trackerBox = await Hive.openBox<Map>(
     HiveTrackerRepository.boxName,
@@ -37,12 +40,28 @@ Future<void> main() async {
   );
   final List<Tracker> savedTrackers = await repository.loadTrackers();
 
+  // Step 4d: system milestone notifications. The plugin (timezone
+  // database, local location) is initialized before the first
+  // frame; if anything fails the app falls back to the noop
+  // scheduler and everything else keeps working.
+  MilestoneScheduler scheduler;
+  try {
+    scheduler = await FlutterMilestoneScheduler.create(
+      preferences: preferences,
+    );
+  } catch (_) {
+    scheduler = NoopMilestoneScheduler();
+  }
+  final String? launchTrackerId = await scheduler.launchTrackerId();
+
   runApp(
     App(
       tokens: tokens,
       preferences: preferences,
       repository: repository,
       initialTrackers: savedTrackers,
+      scheduler: scheduler,
+      initialSelectedTrackerId: launchTrackerId,
     ),
   );
 }
@@ -54,12 +73,21 @@ class App extends StatefulWidget {
     required this.preferences,
     required this.repository,
     required this.initialTrackers,
+    required this.scheduler,
+    required this.initialSelectedTrackerId,
   });
 
   final FusionTokens tokens;
   final SharedPreferences preferences;
   final TrackerRepository repository;
   final List<Tracker> initialTrackers;
+
+  /// Step 4d: system milestone notifications.
+  final MilestoneScheduler scheduler;
+
+  /// The card tapped in the notification that cold-started the
+  /// app (null on a normal launch).
+  final String? initialSelectedTrackerId;
 
   @override
   State<App> createState() => _AppState();
@@ -170,6 +198,8 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           onToggleTheme: toggleTheme,
           repository: widget.repository,
           initialTrackers: widget.initialTrackers,
+          scheduler: widget.scheduler,
+          initialSelectedTrackerId: widget.initialSelectedTrackerId,
         ),
       ),
     );
