@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/notifications/milestone_scheduler.dart';
+import '../../data/remote/remote_backup.dart';
 import '../../data/tracker_repository.dart';
 import '../../models/tracker.dart';
 import '../layouts/landscape_layout.dart';
@@ -17,6 +18,7 @@ class MainPage extends StatelessWidget {
     this.initialTrackers = const <Tracker>[],
     this.scheduler,
     this.initialSelectedTrackerId,
+    this.backup,
   });
 
   /// Theme state owned by main.dart (as in pw-generator):
@@ -24,17 +26,22 @@ class MainPage extends StatelessWidget {
   final bool? isDarkMode;
   final VoidCallback? onToggleTheme;
 
-  /// local persistence handed down from main.dart. Only
+  /// Step 4: local persistence handed down from main.dart. Only
   /// the portrait layout uses it — landscape stays dead code
   /// under the portrait lock, unchanged by design.
   final TrackerRepository? repository;
   final List<Tracker> initialTrackers;
 
+  /// Step 4d: system milestone notifications, handed down from
+  /// main.dart.
   final MilestoneScheduler? scheduler;
 
-  /// The card to open when the app was launched by tapping a
+  /// The card to open at boot when the app was launched by tapping a
   /// milestone notification (cold start).
   final String? initialSelectedTrackerId;
+
+  /// Step 5: online backup, handed down from main.dart.
+  final TrackerBackupService? backup;
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +54,7 @@ class MainPage extends StatelessWidget {
             initialTrackers: initialTrackers,
             scheduler: scheduler,
             initialSelectedTrackerId: initialSelectedTrackerId,
+            backup: backup,
           );
   }
 }

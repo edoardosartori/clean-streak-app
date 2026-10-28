@@ -38,7 +38,7 @@ void main() {
       expect(first.milestoneId, '1d');
       expect(first.fireAt, now.add(const Duration(hours: 24)));
       expect(first.title, '$dayLabel!');
-      expect(first.body, 'Milestone reached · Timer');
+      expect(first.body, 'Milestone reached! · Timer');
       expect(plan.toCancel, isEmpty);
     });
 
@@ -81,7 +81,7 @@ void main() {
 
       expect(
         plan.toSchedule.first.body,
-        'Milestone reached · Water',
+        'Milestone reached! · Water',
       );
     });
 

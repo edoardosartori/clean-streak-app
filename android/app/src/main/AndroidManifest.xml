@@ -7,6 +7,10 @@
          on Play that permission is reserved for alarm-type apps). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <!-- Step 5: Google Sign-In + Drive REST calls. The debug and
+         profile builds get INTERNET from their own manifests; the
+         release build needs it here. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Clean streak"
         android:name="${applicationName}"

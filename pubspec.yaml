@@ -17,8 +17,10 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_timezone: ^5.1.1
+  google_sign_in: ^7.2.0
   hive_ce: ^2.22.0
   hive_ce_flutter: ^2.5.0
+  http: ^1.2.2
   shared_preferences: ^2.5.5
   timezone: ^0.11.2
 

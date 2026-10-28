@@ -13,12 +13,21 @@ import 'core/theme/token_loader.dart';
 import 'features/data/local/hive_tracker_repository.dart';
 import 'features/data/notifications/flutter_milestone_scheduler.dart';
 import 'features/data/notifications/milestone_scheduler.dart';
+import 'features/data/remote/google_drive_backup.dart';
+import 'features/data/remote/remote_backup.dart';
 import 'features/data/tracker_repository.dart';
 import 'features/models/tracker.dart';
 import 'features/presentation/pages/main_page.dart';
 
 const String _appTitle = 'Clean Streak';
 const String _themeModePreferenceKey = 'theme_mode';
+
+/// Google Sign-In server client: the Web OAuth client created in
+/// the Google Cloud Console (the Android client with package name
+/// and SHA-1 lives on the Console side only). Replace the value
+/// with that Client ID.
+const String _googleServerClientId =
+    '1081439990205-hecliltplt94bu6r89vh4556o6hsp73n.apps.googleusercontent.com';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +63,20 @@ Future<void> main() async {
   }
   final String? launchTrackerId = await scheduler.launchTrackerId();
 
+  // Step 5: online backup (Google Drive, App Data folder). The
+  // service restores a previous sign-in silently; if anything
+  // fails the app falls back to the noop service: the cloud chip
+  // shows the not-connected sheet and nothing else changes.
+  TrackerBackupService backup;
+  try {
+    backup = await GoogleDriveTrackerBackupService.create(
+      serverClientId: _googleServerClientId,
+      preferences: preferences,
+    );
+  } catch (_) {
+    backup = NoopTrackerBackupService();
+  }
+
   runApp(
     App(
       tokens: tokens,
@@ -62,6 +85,7 @@ Future<void> main() async {
       initialTrackers: savedTrackers,
       scheduler: scheduler,
       initialSelectedTrackerId: launchTrackerId,
+      backup: backup,
     ),
   );
 }
@@ -75,6 +99,7 @@ class App extends StatefulWidget {
     required this.initialTrackers,
     required this.scheduler,
     required this.initialSelectedTrackerId,
+    required this.backup,
   });
 
   final FusionTokens tokens;
@@ -88,6 +113,9 @@ class App extends StatefulWidget {
   /// The card tapped in the notification that cold-started the
   /// app (null on a normal launch).
   final String? initialSelectedTrackerId;
+
+  /// Step 5: online backup (Google Drive, App Data folder).
+  final TrackerBackupService backup;
 
   @override
   State<App> createState() => _AppState();
@@ -200,6 +228,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
           initialTrackers: widget.initialTrackers,
           scheduler: widget.scheduler,
           initialSelectedTrackerId: widget.initialSelectedTrackerId,
+          backup: widget.backup,
         ),
       ),
     );

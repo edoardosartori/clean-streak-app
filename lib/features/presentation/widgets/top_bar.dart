@@ -10,7 +10,8 @@ import 'dashed_border.dart';
 import 'timer_glyph.dart';
 
 /// Top bar of the home: the timer tabs (tap or swipe), the "+"
-/// tab that opens the editor and the theme toggle.
+/// tab that opens the editor, the cloud backup chip and the
+/// theme toggle.
 ///
 /// Long-press on a timer tab opens the editor for that tracker.
 /// When the selection changes (also from the swipe below) the
@@ -23,6 +24,8 @@ class TopBar extends StatefulWidget {
     this.onToggleTheme,
     this.onNewTimer,
     this.onEditTimer,
+    this.onBackupTap,
+    this.isBackupConnected = false,
   });
 
   final TrackerController controller;
@@ -36,6 +39,13 @@ class TopBar extends StatefulWidget {
 
   /// Long-press on a timer tab: edit that tracker.
   final ValueChanged<Tracker>? onEditTimer;
+
+  /// Tap on the cloud chip: open the backup sheet (step 5).
+  /// Null = the chip is not shown (no backup service wired).
+  final VoidCallback? onBackupTap;
+
+  /// Signed-in state: the chip icon uses the active color.
+  final bool isBackupConnected;
 
   @override
   State<TopBar> createState() => _TopBarState();
@@ -132,6 +142,13 @@ class _TopBarState extends State<TopBar> {
             ),
           ),
         ),
+        if (widget.onBackupTap != null) ...[
+          const SizedBox(width: 8),
+          _BackupChip(
+            connected: widget.isBackupConnected,
+            onTap: widget.onBackupTap!,
+          ),
+        ],
         if (widget.onToggleTheme != null && widget.isDarkMode != null) ...[
           const SizedBox(width: 8),
           _ThemeToggle(
@@ -229,6 +246,40 @@ class _AddChip extends StatelessWidget {
             width: 40,
             height: 40,
             child: Icon(Icons.add_rounded, size: 20, color: color),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The cloud chip (step 5): opens the backup sheet. Same chip
+/// style as the theme toggle; the active color (stateActive,
+/// as the selected tabs) marks the signed-in state.
+class _BackupChip extends StatelessWidget {
+  const _BackupChip({required this.connected, required this.onTap});
+
+  final bool connected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ext = theme.extension<FusionThemeExtension>()!;
+
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: Material(
+        color: ext.surfaceVariant,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Icon(
+            Icons.cloud_rounded,
+            size: 20,
+            color: connected ? ext.stateActive : theme.colorScheme.onSurface,
           ),
         ),
       ),

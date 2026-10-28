@@ -5,12 +5,16 @@ import 'package:flutter/services.dart';
 
 import '../../../core/feedback/fusion_dialog.dart';
 import '../../../core/theme/fusion_motion.dart';
+import '../../../core/theme/fusion_theme_extension.dart';
+import '../../../core/theme/fusion_tokens_scope.dart';
 import '../../data/notifications/milestone_scheduler.dart';
+import '../../data/remote/remote_backup.dart';
 import '../../data/tracker_repository.dart';
 import '../../domain/streak_calculator.dart';
 import '../../models/tracker.dart';
 import '../state/app_state.dart';
 import '../state/tracker_controller.dart';
+import '../widgets/backup_sheet.dart';
 import '../widgets/empty_trackers.dart';
 import '../widgets/milestone_card.dart';
 import '../widgets/milestone_celebrations.dart';
@@ -30,6 +34,7 @@ class PortraitLayout extends StatefulWidget {
     this.initialTrackers = const <Tracker>[],
     this.scheduler,
     this.initialSelectedTrackerId,
+    this.backup,
   });
 
   /// Theme state is owned by main.dart (same pattern as
@@ -52,6 +57,9 @@ class PortraitLayout extends StatefulWidget {
   /// milestone notification (cold start).
   final String? initialSelectedTrackerId;
 
+  /// Online backup (step 5). Null = no cloud chip in the top bar.
+  final TrackerBackupService? backup;
+
   @override
   State<PortraitLayout> createState() => _PortraitLayoutState();
 }
@@ -66,6 +74,12 @@ class _PortraitLayoutState extends State<PortraitLayout> {
   /// select/reset/editor/celebration marking.
   Timer? _ticker;
 
+  /// "Backup saved" toast (step 5): the automatic mirror is
+  /// silent, the manual one confirms with a toast.
+  Timer? _toastTimer;
+  String? _toastText;
+  DateTime? _toastAt;
+
   @override
   void initState() {
     super.initState();
@@ -73,6 +87,7 @@ class _PortraitLayoutState extends State<PortraitLayout> {
       initial: AppState(trackers: widget.initialTrackers),
       repository: widget.repository,
       scheduler: widget.scheduler,
+      backup: widget.backup,
     );
     celebrations = MilestoneCelebrationQueue(
       onMarkCelebrated: controller.updateTracker,
@@ -94,6 +109,9 @@ class _PortraitLayoutState extends State<PortraitLayout> {
     });
     controller.addListener(_syncPage);
     celebrations.addListener(_onCelebrationsChanged);
+    // The cloud chip follows the sign-in state (silent restore at
+    // boot included).
+    widget.backup?.addListener(_onBackupChanged);
     // First scan after the first frame: the home shows up, then
     // the celebrations of everything reached while away. The
     // notification permission is asked here too, once ever.
@@ -108,7 +126,9 @@ class _PortraitLayoutState extends State<PortraitLayout> {
   @override
   void dispose() {
     widget.scheduler?.onTrackerTapped = null;
+    widget.backup?.removeListener(_onBackupChanged);
     _ticker?.cancel();
+    _toastTimer?.cancel();
     controller.removeListener(_syncPage);
     celebrations.removeListener(_onCelebrationsChanged);
     controller.dispose();
@@ -124,6 +144,12 @@ class _PortraitLayoutState extends State<PortraitLayout> {
   }
 
   void _onCelebrationsChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _onBackupChanged() {
     if (mounted) {
       setState(() {});
     }
@@ -204,6 +230,38 @@ class _PortraitLayoutState extends State<PortraitLayout> {
     }
   }
 
+  /// Cloud chip tap -> backup sheet (step 5).
+  Future<void> _openBackupSheet() async {
+    final TrackerBackupService? backup = widget.backup;
+    if (backup == null) {
+      return;
+    }
+    await showBackupSheet(
+      context,
+      controller: controller,
+      backup: backup,
+      onBackedUp: _showBackupToast,
+    );
+  }
+
+  /// "Backup saved" confirmation of a manual backup (approved
+  /// mockup): a toast at the bottom of the home, auto-dismissed.
+  void _showBackupToast() {
+    _toastTimer?.cancel();
+    setState(() {
+      _toastText = 'Backup saved';
+      _toastAt = widget.backup?.lastBackupAt ?? DateTime.now();
+    });
+    _toastTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _toastText = null;
+          _toastAt = null;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -227,6 +285,9 @@ class _PortraitLayoutState extends State<PortraitLayout> {
                       onToggleTheme: widget.onToggleTheme,
                       onNewTimer: () => _openEditor(isNew: true),
                       onEditTimer: (tracker) => _openEditor(isNew: false),
+                      onBackupTap:
+                          widget.backup == null ? null : _openBackupSheet,
+                      isBackupConnected: widget.backup?.isSignedIn ?? false,
                     ),
                     const SizedBox(height: 14),
                     Expanded(
@@ -273,6 +334,13 @@ class _PortraitLayoutState extends State<PortraitLayout> {
               Positioned.fill(
                 child: MilestoneCelebrationOverlay(queue: celebrations),
               ),
+            if (_toastText != null)
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 16,
+                child: _BackupToast(text: _toastText!, at: _toastAt!),
+              ),
           ],
         ),
       ),
@@ -302,4 +370,89 @@ class _PortraitLayoutState extends State<PortraitLayout> {
           dark ? Brightness.light : Brightness.dark,
     );
   }
+}
+
+/// Bottom toast: FusionDialog surface recipe (surface + border in
+/// dark, soft shadow in light), success check, text and the
+/// backup date in JetBrains Mono.
+class _BackupToast extends StatelessWidget {
+  const _BackupToast({required this.text, required this.at});
+
+  final String text;
+  final DateTime at;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final FusionThemeExtension ext = theme.extension<FusionThemeExtension>()!;
+    final tokens = FusionTokensScope.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    final Color secondary = tokens.color(
+      isDark ? 'semantic.dark.textSecondary' : 'semantic.light.textSecondary',
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: isDark ? Border.all(color: ext.border) : null,
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: const Color(0xFF12161B).withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.check_rounded, size: 18, color: ext.success),
+          const SizedBox(width: 9),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            _formatToastDate(at),
+            style: TextStyle(
+              fontSize: 11,
+              fontFamily: 'JetBrains Mono',
+              color: secondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static const List<String> _months = <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  /// "Oct 28, 2026 · 14:32" — the editor / celebration format.
+  static String _formatToastDate(DateTime d) =>
+      '${_months[d.month - 1]} ${d.day}, ${d.year} · '
+      '${_twoDigits(d.hour)}:${_twoDigits(d.minute)}';
+
+  static String _twoDigits(int n) => n < 10 ? '0$n' : '$n';
 }

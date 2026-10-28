@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../data/notifications/milestone_scheduler.dart';
+import '../../data/remote/remote_backup.dart';
 import '../../data/tracker_repository.dart';
 import '../../domain/milestone_engine.dart';
 import '../../domain/milestone_notification_planner.dart';
@@ -15,29 +16,42 @@ import 'app_state.dart';
 /// changes only when the data changes (tab selection, reset,
 /// editor, add/delete, celebration marks).
 ///
-/// Persistence: when a [TrackerRepository] is injected,
+/// Persistence (step 4): when a [TrackerRepository] is injected,
 /// every data mutation is mirrored to it, fire-and-forget (Hive
 /// writes are readable immediately; the future only covers the
 /// disk flush). The tab selection is NOT persisted (confirmed
 /// decision: the app always restarts on the first tab).
+///
 /// System notifications (step 4d): same mirror pattern. Every
 /// mutation (and the construction itself) re-applies the full
 /// notification plan: deterministic ids make it idempotent, stale
 /// pending notifications are cancelled, milestones that fired
 /// while the app was closed are removed from the tray because the
 /// in-app celebrations cover them.
+///
+/// Online backup (step 5): same mirror pattern once more. Every
+/// mutation (and the construction) uploads the full snapshot to
+/// Drive, fire-and-forget: pushSnapshot never throws and queues
+/// the uploads. Until the user signed in manually the wired
+/// service is a Noop, so nothing happens.
 class TrackerController extends ValueNotifier<AppState> {
   TrackerController({
     AppState? initial,
     TrackerRepository? repository,
     MilestoneScheduler? scheduler,
+    TrackerBackupService? backup,
   })  : _repository = repository,
         _scheduler = scheduler,
+        _backup = backup,
         super(initial ?? const AppState(trackers: [])) {
     // Boot: plan the loaded cards immediately, so the system knows
     // about every upcoming milestone even if the app then stays
     // closed for weeks.
     _rescheduleNotifications();
+    // Boot mirror for the backup too: a returning user pushes the
+    // loaded state as it is (idempotent, last write wins). With
+    // no signed-in account yet this is a silent no-op.
+    _pushBackup();
   }
 
   /// Design cap: at most 20 active timers (confirmed decision).
@@ -46,6 +60,9 @@ class TrackerController extends ValueNotifier<AppState> {
   final TrackerRepository? _repository;
 
   final MilestoneScheduler? _scheduler;
+
+  final TrackerBackupService? _backup;
+
   final MilestoneNotificationPlanner _planner = MilestoneNotificationPlanner();
 
   int get selectedIndex => value.selectedIndex;
@@ -71,6 +88,7 @@ class TrackerController extends ValueNotifier<AppState> {
     value = value.copyWith(trackers: trackers);
     _save(stored);
     _rescheduleNotifications();
+    _pushBackup();
   }
 
   /// Adds a new tracker and selects it.
@@ -86,6 +104,7 @@ class TrackerController extends ValueNotifier<AppState> {
     );
     _save(stored);
     _rescheduleNotifications();
+    _pushBackup();
     return true;
   }
 
@@ -101,6 +120,7 @@ class TrackerController extends ValueNotifier<AppState> {
     value = value.copyWith(trackers: trackers);
     _save(stored);
     _rescheduleNotifications();
+    _pushBackup();
   }
 
   /// Removes a tracker and keeps the selection valid. The plan
@@ -121,6 +141,35 @@ class TrackerController extends ValueNotifier<AppState> {
       unawaited(repository.deleteTracker(id));
     }
     _rescheduleNotifications();
+    _pushBackup();
+  }
+
+  /// Full local replacement from a Drive restore (step 5). The
+  /// restored list becomes the state, the ids that disappeared
+  /// are deleted from Hive, everything else is saved, and both
+  /// the notification plan and the snapshot are mirrored back
+  /// (the push is the restored content itself: last write wins,
+  /// also when the local copy was newer).
+  void replaceAll(List<Tracker> trackers) {
+    final Set<String> removedIds = <String>{
+      for (final Tracker t in value.trackers) t.id,
+    }..removeAll(<String>{
+        for (final Tracker t in trackers) t.id,
+      });
+
+    value = value.copyWith(trackers: trackers, selectedIndex: 0);
+
+    final TrackerRepository? repository = _repository;
+    if (repository != null) {
+      for (final String id in removedIds) {
+        unawaited(repository.deleteTracker(id));
+      }
+      for (final Tracker tracker in trackers) {
+        unawaited(repository.saveTracker(tracker));
+      }
+    }
+    _rescheduleNotifications();
+    _pushBackup();
   }
 
   /// Celebration state maintenance (celebration step):
@@ -151,6 +200,16 @@ class TrackerController extends ValueNotifier<AppState> {
       return;
     }
     unawaited(scheduler.apply(_planner.planFor(value.trackers)));
+  }
+
+  /// Online backup mirror (step 5): fire-and-forget, the service
+  /// queues and swallows the errors.
+  void _pushBackup() {
+    final TrackerBackupService? backup = _backup;
+    if (backup == null) {
+      return;
+    }
+    unawaited(backup.pushSnapshot(value.trackers));
   }
 
   void _save(Tracker tracker) {
