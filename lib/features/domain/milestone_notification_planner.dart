@@ -84,7 +84,7 @@ class MilestoneNotificationPlanner {
             trackerId: tracker.id,
             milestoneId: upcoming.definition.id,
             title: '${upcoming.definition.label}!',
-            body: 'Milestone reached · ${tracker.name ?? 'Timer'}',
+            body: 'Milestone reached! · ${tracker.name ?? 'Timer'}',
             fireAt: upcoming.targetDate,
           ),
         );
