@@ -200,12 +200,12 @@ class _CelebrationSheet extends StatelessWidget {
               height: 64,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: ext.success, width: 2),
+                border: Border.all(color: ext.success, width: 4),
               ),
               alignment: Alignment.center,
               child: Icon(
                 Icons.check_rounded,
-                size: 30,
+                size: 32,
                 color: ext.success,
               ),
             ),

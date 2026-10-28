@@ -83,22 +83,24 @@ class GoogleDriveTrackerBackupService extends TrackerBackupService {
     await signIn.initialize(serverClientId: serverClientId);
     _signIn = signIn;
     signIn.authenticationEvents.listen(_onAuthenticationEvent);
-    // Restores a previous session without any prompt. When it
-    // succeeds the event flips isSignedIn; the auto-backup then
-    // starts from the next mutation (a sign-in never uploads on
-    // its own, see the backup sheet docs for the why).
-    unawaited(_restoreSilently(signIn));
+    // The silent restore does NOT run here: with more than one
+    // Google account on the phone the Credential Manager shows
+    // its account picker, and the app must never pop one unasked
+    // at startup. The backup sheet triggers it on open instead
+    // (see restoreSessionSilently).
   }
 
-  /// Best-effort silent session restore: a canceled or failed
-  /// attempt is not an error — the user is simply still signed
-  /// out. Kills the unhandled GoogleSignInException(canceled)
-  /// the raw fire-and-forget call used to throw at startup.
-  Future<void> _restoreSilently(GoogleSignIn signIn) async {
+  @override
+  Future<void> restoreSessionSilently() async {
+    final GoogleSignIn? signIn = _signIn;
+    if (signIn == null || _account != null) {
+      return;
+    }
     try {
       await signIn.attemptLightweightAuthentication();
     } catch (_) {
-      // Nothing to restore, or the system selector was canceled.
+      // Nothing to restore, or the system selector was canceled:
+      // a failed silent restore is not an error.
     }
   }
 

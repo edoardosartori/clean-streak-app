@@ -36,6 +36,12 @@ abstract class TrackerBackupService extends ChangeNotifier {
   /// throws [DriveBackupException] when something really failed.
   Future<bool> signIn();
 
+  /// Best-effort silent restore of a previous session: the
+  /// backup sheet calls it when it opens, so the app never pops
+  /// an account picker unasked (e.g. at startup). A canceled or
+  /// failed restore is not an error.
+  Future<void> restoreSessionSilently();
+
   Future<void> signOut();
 
   /// Uploads the full snapshot, last write wins. Never throws:
@@ -81,6 +87,9 @@ class NoopTrackerBackupService extends TrackerBackupService {
 
   @override
   Future<bool> signIn() async => false;
+
+  @override
+  Future<void> restoreSessionSilently() async {}
 
   @override
   Future<void> signOut() async {}

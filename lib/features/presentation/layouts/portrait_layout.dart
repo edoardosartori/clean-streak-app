@@ -274,7 +274,7 @@ class _PortraitLayoutState extends State<PortraitLayout> {
           children: <Widget>[
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
@@ -336,8 +336,8 @@ class _PortraitLayoutState extends State<PortraitLayout> {
               ),
             if (_toastText != null)
               Positioned(
-                left: 20,
-                right: 20,
+                left: 18,
+                right: 18,
                 bottom: 16,
                 child: _BackupToast(text: _toastText!, at: _toastAt!),
               ),
@@ -415,7 +415,7 @@ class _BackupToast extends StatelessWidget {
           Text(
             text,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
             ),
@@ -424,7 +424,7 @@ class _BackupToast extends StatelessWidget {
           Text(
             _formatToastDate(at),
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontFamily: 'JetBrains Mono',
               color: secondary,
             ),

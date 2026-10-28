@@ -210,7 +210,7 @@ class _TabChip extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: fg,
                   ),
@@ -277,7 +277,7 @@ class _BackupChip extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Icon(
-            Icons.cloud_rounded,
+            Icons.cloud_outlined,
             size: 20,
             color: connected ? ext.stateActive : theme.colorScheme.onSurface,
           ),

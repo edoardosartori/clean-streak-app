@@ -6,14 +6,15 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/fusion_theme_extension.dart';
 import '../../../core/theme/fusion_tokens_scope.dart';
+import '../../domain/milestone_catalog.dart';
 import '../../domain/milestone_engine.dart';
 import '../../domain/streak_calculator.dart';
 import '../../models/tracker.dart';
 import 'scene_painter.dart';
 import 'timer_glyph.dart';
 
-/// Hero card of a timer: scene backdrop, "Clean for" calendar
-/// counter (Y/M/D + h/m/s), milestone in focus with progress.
+/// Hero card of a timer: scene backdrop, calendar counter
+/// (Y/M/D + h/m/s), milestone in focus with progress.
 /// The header row carries the two compact actions: edit (opens
 /// the tracker editor, which in edit mode also offers delete)
 /// and reset.
@@ -53,6 +54,12 @@ class StreakHeroCard extends StatelessWidget {
       startAt: tracker.startAt,
       disabledMilestones: tracker.disabledMilestones,
     );
+
+    // The bar never shows 100%: near the milestone the progress
+    // ROUNDS UP to "100%" seconds before it actually fires, so
+    // anything from 99% up is clamped to 99 (user rule).
+    final double shownProgress =
+        (snapshot.current?.progress ?? 0.0).clamp(0.0, 0.99);
 
     // Content over the image is always white (mockup decision): both
     // themes draw a dark scrim over the scene. Gray sub-labels use the
@@ -136,7 +143,7 @@ class StreakHeroCard extends StatelessWidget {
                               : Text(
                                   tracker.name!,
                                   style: const TextStyle(
-                                    fontSize: 15,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w500,
                                     color: Colors.white,
                                   ),
@@ -187,7 +194,7 @@ class StreakHeroCard extends StatelessWidget {
                                     (_twoDigits(breakdown.months), 'M'),
                                     (_twoDigits(breakdown.days), 'D'),
                                   ],
-                                  valueSize: 34,
+                                  valueSize: 35,
                                   valueColor: digitColor,
                                   labelColor: ymdLabel,
                                 ),
@@ -198,7 +205,7 @@ class StreakHeroCard extends StatelessWidget {
                                     (_twoDigits(breakdown.minutes), 'm'),
                                     (_twoDigits(breakdown.seconds), 's'),
                                   ],
-                                  valueSize: 19,
+                                  valueSize: 20,
                                   valueColor: Colors.white,
                                   labelColor: secondary,
                                 ),
@@ -210,12 +217,7 @@ class StreakHeroCard extends StatelessWidget {
                     ),
                     const Spacer(flex: 1),
                     if (snapshot.current != null) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        height: 1,
-                        color: Colors.white.withValues(alpha: 0.18),
-                      ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 24),
                       Row(
                         children: [
                           Container(
@@ -226,10 +228,14 @@ class StreakHeroCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             alignment: Alignment.center,
-                            child: TimerGlyph(
-                              id: TimerGlyphId.droplet,
-                              size: 20,
-                              color: ext.stateActive,
+                            child: Text(
+                              _compact(snapshot.current!.definition),
+                              style: TextStyle(
+                                fontFamily: 'JetBrains Mono',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: ext.stateActive,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -241,7 +247,7 @@ class StreakHeroCard extends StatelessWidget {
                                   _capitalize(
                                       snapshot.current!.definition.label),
                                   style: const TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 17,
                                     fontWeight: FontWeight.w500,
                                     color: Colors.white,
                                   ),
@@ -250,10 +256,10 @@ class StreakHeroCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${(snapshot.current!.progress * 100).round()}%',
+                            '${(shownProgress * 100).round()}%',
                             style: TextStyle(
                               fontFamily: 'JetBrains Mono',
-                              fontSize: 14,
+                              fontSize: 15,
                               color: digitColor,
                             ),
                           ),
@@ -275,8 +281,7 @@ class StreakHeroCard extends StatelessWidget {
                               ),
                               FractionallySizedBox(
                                 alignment: Alignment.centerLeft,
-                                widthFactor:
-                                    snapshot.current!.progress.clamp(0.0, 1.0),
+                                widthFactor: shownProgress.clamp(0.0, 1.0),
                                 child: SizedBox.expand(
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
@@ -336,7 +341,7 @@ class StreakHeroCard extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: labelColor,
                   ),
@@ -352,6 +357,14 @@ class StreakHeroCard extends StatelessWidget {
 
   static String _capitalize(String s) =>
       s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+
+  /// Compact badge label: "1D", "14D", "1M", "1Y" — the mono
+  /// number-in-badge replaces the old droplet-for-all.
+  static String _compact(MilestoneDefinition def) {
+    if (def.days > 0) return '${def.days}D';
+    if (def.months % 12 == 0) return '${def.months ~/ 12}Y';
+    return '${def.months}M';
+  }
 }
 
 /// Compact 36x36 action button of the hero header: frosted white
@@ -370,8 +383,8 @@ class _HeaderButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 36,
-      height: 36,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(11),
@@ -382,7 +395,7 @@ class _HeaderButton extends StatelessWidget {
         onPressed: onTap,
         icon: Icon(
           icon,
-          size: 18,
+          size: 20,
           color: Colors.white.withValues(alpha: 0.92),
         ),
       ),

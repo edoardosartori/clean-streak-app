@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -52,6 +53,13 @@ Future<void> showBackupSheet(
   required TrackerBackupService backup,
   required VoidCallback onBackedUp,
 }) {
+  // The app never pops an account picker unasked: the silent
+  // restore of a previous session runs here, when the user opens
+  // the sheet. Once connected in this session, the auto-backup
+  // mirror covers every mutation.
+  if (!backup.isSignedIn) {
+    unawaited(backup.restoreSessionSilently());
+  }
   return showDialog<void>(
     context: context,
     barrierColor: Colors.transparent,
@@ -143,6 +151,8 @@ class _BackupSheet extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final FusionThemeExtension ext = theme.extension<FusionThemeExtension>()!;
 
+    // Material so the texts inherit the theme's DefaultTextStyle:
+    // a custom dialog without it gets the debug yellow underline.
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -171,7 +181,7 @@ class _BackupSheet extends StatelessWidget {
   Widget _title(ThemeData theme) => Text(
         'Google Drive backup',
         style: TextStyle(
-          fontSize: 16,
+          fontSize: 17,
           fontWeight: FontWeight.w700,
           color: theme.colorScheme.onSurface,
         ),
@@ -189,7 +199,7 @@ class _BackupSheet extends StatelessWidget {
           ' Drive and restore them on any device.\n\nBackups run'
           ' automatically once you sign in.',
           style: TextStyle(
-            fontSize: 12.5,
+            fontSize: 13.5,
             height: 1.5,
             color: secondary,
           ),
@@ -200,7 +210,7 @@ class _BackupSheet extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: theme.colorScheme.primary,
             foregroundColor: theme.colorScheme.onPrimary,
-            minimumSize: const Size.fromHeight(46),
+            minimumSize: const Size.fromHeight(52),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -214,7 +224,7 @@ class _BackupSheet extends StatelessWidget {
               : const Text(
                   'Back up to Google Drive',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -223,12 +233,12 @@ class _BackupSheet extends StatelessWidget {
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           style: TextButton.styleFrom(
-            minimumSize: const Size.fromHeight(38),
+            minimumSize: const Size.fromHeight(44),
             foregroundColor: secondary,
           ),
           child: const Text(
             'Not now',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -270,7 +280,7 @@ class _BackupSheet extends StatelessWidget {
                       ? '?'
                       : email[0].toUpperCase(),
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.onPrimary,
                   ),
@@ -284,7 +294,7 @@ class _BackupSheet extends StatelessWidget {
                     Text(
                       email ?? 'Google account',
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                         color: theme.colorScheme.onSurface,
                       ),
@@ -293,7 +303,7 @@ class _BackupSheet extends StatelessWidget {
                     Text(
                       'Connected · auto-backup on',
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w600,
                         color: ext.success,
                       ),
@@ -324,7 +334,7 @@ class _BackupSheet extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: theme.colorScheme.primary,
             foregroundColor: theme.colorScheme.onPrimary,
-            minimumSize: const Size.fromHeight(46),
+            minimumSize: const Size.fromHeight(52),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -338,7 +348,7 @@ class _BackupSheet extends StatelessWidget {
               : const Text(
                   'Back up now',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -347,7 +357,7 @@ class _BackupSheet extends StatelessWidget {
         OutlinedButton(
           onPressed: backup.isBusy ? null : () => _restore(context),
           style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(42),
+            minimumSize: const Size.fromHeight(48),
             side: BorderSide(color: secondary.withValues(alpha: 0.4)),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -355,19 +365,19 @@ class _BackupSheet extends StatelessWidget {
           ),
           child: const Text(
             'Restore from Drive',
-            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+            style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
           ),
         ),
         const SizedBox(height: 6),
         TextButton(
           onPressed: backup.isBusy ? null : _signOut,
           style: TextButton.styleFrom(
-            minimumSize: const Size.fromHeight(38),
+            minimumSize: const Size.fromHeight(44),
             foregroundColor: secondary,
           ),
           child: const Text(
             'Sign out',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -511,12 +521,12 @@ class _InfoLine extends StatelessWidget {
       children: <Widget>[
         Text(
           label,
-          style: TextStyle(fontSize: 11.5, color: secondary),
+          style: TextStyle(fontSize: 12.5, color: secondary),
         ),
         Text(
           value,
           style: TextStyle(
-            fontSize: 11.5,
+            fontSize: 12.5,
             fontWeight: FontWeight.w600,
             fontFamily: mono ? 'JetBrains Mono' : null,
             color: theme.colorScheme.onSurface,

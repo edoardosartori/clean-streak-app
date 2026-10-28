@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/fusion_theme_extension.dart';
 import '../../../core/theme/fusion_tokens_scope.dart';
+import '../../domain/milestone_catalog.dart';
 import '../../domain/milestone_engine.dart';
 import '../../models/tracker.dart';
-import 'timer_glyph.dart';
 
 /// "Milestones" card under the hero: last reached / in progress /
 /// next — one row each, from MilestoneEngine over the active
@@ -55,7 +55,7 @@ class MilestoneCard extends StatelessWidget {
           Text(
             'Milestones',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: FontWeight.w500,
               color: theme.colorScheme.onSurface,
             ),
@@ -79,10 +79,14 @@ class MilestoneCard extends StatelessWidget {
           if (snapshot.current != null) ...[
             _MilestoneRow(
               badgeColor: ext.stateActiveTint,
-              badgeChild: TimerGlyph(
-                id: TimerGlyphId.droplet,
-                size: 14,
-                color: ext.stateActive,
+              badgeChild: Text(
+                _compact(snapshot.current!.definition),
+                style: TextStyle(
+                  fontFamily: 'JetBrains Mono',
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: ext.stateActive,
+                ),
               ),
               label: snapshot.current!.definition.label,
               labelColor: theme.colorScheme.onSurface,
@@ -94,10 +98,14 @@ class MilestoneCard extends StatelessWidget {
           if (snapshot.next != null)
             _MilestoneRow(
               badgeColor: ext.surfaceVariant,
-              badgeChild: TimerGlyph(
-                id: TimerGlyphId.droplet,
-                size: 14,
-                color: secondary,
+              badgeChild: Text(
+                _compact(snapshot.next!.definition),
+                style: TextStyle(
+                  fontFamily: 'JetBrains Mono',
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: secondary,
+                ),
               ),
               label: snapshot.next!.definition.label,
               labelColor: secondary,
@@ -106,6 +114,14 @@ class MilestoneCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Compact badge label: "1D", "14D", "1M", "1Y" — the mono
+  /// number-in-circle badge replaces the old droplet-for-all.
+  static String _compact(MilestoneDefinition def) {
+    if (def.days > 0) return '${def.days}D';
+    if (def.months % 12 == 0) return '${def.months ~/ 12}Y';
+    return '${def.months}M';
   }
 
   static const List<String> _months = [
@@ -167,7 +183,7 @@ class _MilestoneRow extends StatelessWidget {
           height: 28,
           decoration: BoxDecoration(
             color: badgeColor,
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(14),
           ),
           alignment: Alignment.center,
           child: badgeChild,
@@ -176,14 +192,14 @@ class _MilestoneRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: TextStyle(fontSize: 14, color: labelColor),
+            style: TextStyle(fontSize: 15, color: labelColor),
           ),
         ),
         Text(
           trailing,
           style: TextStyle(
             fontFamily: 'JetBrains Mono',
-            fontSize: 12,
+            fontSize: 13,
             color: secondary,
           ),
         ),

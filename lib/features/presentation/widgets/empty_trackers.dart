@@ -45,7 +45,7 @@ class EmptyTrackers extends StatelessWidget {
           Text(
             'No timers yet',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 17,
               fontWeight: FontWeight.w500,
               color: theme.colorScheme.onSurface,
             ),
@@ -54,11 +54,11 @@ class EmptyTrackers extends StatelessWidget {
           Text(
             'Create your first tracker to start a streak.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: secondary),
+            style: TextStyle(fontSize: 14, color: secondary),
           ),
           const SizedBox(height: 20),
           SizedBox(
-            height: 48,
+            height: 52,
             child: FilledButton(
               onPressed: onNewTimer,
               style: FilledButton.styleFrom(
@@ -68,7 +68,10 @@ class EmptyTrackers extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: const Text('New timer'),
+              child: const Text(
+              'New timer',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
             ),
           ),
         ],
