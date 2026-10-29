@@ -315,6 +315,20 @@
         "background": "feedback.danger",
         "foreground": "{primitive.color.white}"
       }
+    },
+    "flip": {
+      "$description": "3D card flip on tap (Y axis, 180 degrees). Suite-wide pattern, first implemented on the clean-streak hero card. Rotation is LINEAR (constant angular speed, no easing on the rotation itself), the back face swaps in at 90 degrees, the rounded clip lives INSIDE the transform so the corners stay round mid-flight, and the flip state is ephemeral: disposing the card (PageView swipe) resets to the front. Buttons inside the card win the gesture arena over the body tap, so header actions never flip.",
+      "duration": { "$value": "{primitive.motion.duration.normal}" },
+      "perspective": { "$value": 0.0015 },
+      "backFaceSwapAt": { "$value": 0.5 }
+    },
+    "historyChart": {
+      "$description": "Line chart of a day-granular value over time (streak sawtooth: every run climbs from zero, drops to zero where it closed, climbs again). Line stroke in state.active with round cap and join, solid fill in state.activeTint, cyan glow in dark only. Grid color: semantic border in dark, ink at 8% in light. The painter never repaints within the same day (day-level comparison), and the 'now' point stays pinned to the right edge. Implemented in StreakHistoryChart.",
+      "lineStroke": { "$value": 2 },
+      "gridLines": { "$value": 3 },
+      "axisLabelSize": { "$value": 10 },
+      "axisLabelFamily": { "$value": "{primitive.font.family.mono}" },
+      "leftGutter": { "$value": 26 }
     }
   },
 
@@ -371,6 +385,13 @@
       "OptionSwitchTile": "lib/features/password_generator/presentation/widgets/option_switch_tile.dart — option row with switch",
       "PortraitLayout": "lib/features/password_generator/presentation/layouts/portrait_layout.dart — vertical UI, single scroll",
       "LandscapeLayout": "lib/features/password_generator/presentation/layouts/landscape_layout.dart — two columns (password and actions / options card), per-column scroll, maxWidth 900"
+    },
+    "clean-streak-app": {
+      "StreakHeroCard": "lib/features/presentation/widgets/streak_hero_card.dart — hero card with 8-scene backdrop, calendar counter (Y/M/D + h/m/s), milestone block; Step 8: 3D flip (component.flip) with the streak history on the back",
+      "StreakHistoryChart": "lib/features/presentation/widgets/history_chart.dart — sawtooth line chart (component.historyChart) fed by computeHistorySeries",
+      "ScenePainter": "lib/features/presentation/widgets/scene_painter.dart — the 8 scenes drawn from scene.* and primitive.color.* tokens (no baked bitmaps)",
+      "MilestoneCard": "lib/features/presentation/widgets/milestone_card.dart — upcoming milestones card (badge, label, mono trailing)",
+      "BackupSheet": "lib/features/presentation/widgets/backup_sheet.dart — Drive backup/restore sheet (restore goes through TrackerController.replaceAll)"
     }
   },
   "scene": {
