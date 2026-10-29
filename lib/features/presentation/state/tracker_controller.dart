@@ -7,6 +7,7 @@ import '../../data/remote/remote_backup.dart';
 import '../../data/tracker_repository.dart';
 import '../../domain/milestone_engine.dart';
 import '../../domain/milestone_notification_planner.dart';
+import '../../models/streak_run.dart';
 import '../../models/tracker.dart';
 import 'app_state.dart';
 
@@ -34,6 +35,11 @@ import 'app_state.dart';
 /// Drive, fire-and-forget: pushSnapshot never throws and queues
 /// the uploads. Until the user signed in manually the wired
 /// service is a Noop, so nothing happens.
+///
+/// History (step 8): when the streak start moves forward (instant
+/// reset, relapse at a later date) the run the old streak is
+/// closing is appended to the tracker's history BEFORE the new
+/// start lands.
 class TrackerController extends ValueNotifier<AppState> {
   TrackerController({
     AppState? initial,
@@ -81,8 +87,12 @@ class TrackerController extends ValueNotifier<AppState> {
     }
     final List<Tracker> trackers = List<Tracker>.of(value.trackers);
     final int i = value.selectedIndex.clamp(0, trackers.length - 1);
+    final Tracker previous = trackers[i];
+    final DateTime now = DateTime.now();
     final Tracker stored = _refreshCelebrated(
-      trackers[i].copyWith(startAt: DateTime.now()),
+      previous
+          .copyWith(history: _closedHistory(previous, now))
+          .copyWith(startAt: now),
     );
     trackers[i] = stored;
     value = value.copyWith(trackers: trackers);
@@ -109,13 +119,19 @@ class TrackerController extends ValueNotifier<AppState> {
   }
 
   /// Saves an editor edit (icon, name, scene, milestones, relapse).
+  /// A relapse that moves the start forward first appends the run
+  /// the old streak is closing (history step).
   void updateTracker(Tracker tracker) {
     final List<Tracker> trackers = List<Tracker>.of(value.trackers);
     final int i = trackers.indexWhere((Tracker t) => t.id == tracker.id);
     if (i == -1) {
       return;
     }
-    final Tracker stored = _refreshCelebrated(tracker);
+    final Tracker previous = trackers[i];
+    final Tracker incoming = tracker.copyWith(
+      history: _closedHistory(previous, tracker.startAt),
+    );
+    final Tracker stored = _refreshCelebrated(incoming);
     trackers[i] = stored;
     value = value.copyWith(trackers: trackers);
     _save(stored);
@@ -149,7 +165,8 @@ class TrackerController extends ValueNotifier<AppState> {
   /// are deleted from Hive, everything else is saved, and both
   /// the notification plan and the snapshot are mirrored back
   /// (the push is the restored content itself: last write wins,
-  /// also when the local copy was newer).
+  /// also when the local copy was newer). The restored trackers
+  /// bring their own history with them: nothing is closed here.
   void replaceAll(List<Tracker> trackers) {
     final Set<String> removedIds = <String>{
       for (final Tracker t in value.trackers) t.id,
@@ -170,6 +187,22 @@ class TrackerController extends ValueNotifier<AppState> {
     }
     _rescheduleNotifications();
     _pushBackup();
+  }
+
+  /// History (history step): the run the current streak is about
+  /// to close, when the start moves forward (instant reset or a
+  /// relapse set at a later date). A relapse set BEFORE the
+  /// current start rewrites the streak backwards: nothing closed,
+  /// nothing logged (the codec and the stats would drop such a
+  /// run anyway).
+  List<StreakRun> _closedHistory(Tracker previous, DateTime newStartAt) {
+    if (!newStartAt.isAfter(previous.startAt)) {
+      return previous.history;
+    }
+    return <StreakRun>[
+      ...previous.history,
+      StreakRun(startedAt: previous.startAt, endedAt: newStartAt),
+    ];
   }
 
   /// Celebration state maintenance (celebration step):

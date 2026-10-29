@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'streak_run.dart';
+
 /// The 16 fixed timer glyphs of the v1 set (line-art, suite style).
 /// Fixed by design decision: no custom icons in v1.
 enum TimerGlyphId {
@@ -37,6 +39,7 @@ class Tracker {
     this.name,
     this.disabledMilestones = const {},
     this.celebratedMilestones = const {},
+    this.history = const [],
   });
 
   final String id;
@@ -65,6 +68,12 @@ class Tracker {
   /// and when the queue marks a card.
   final Set<String> celebratedMilestones;
 
+  /// Closed streaks of this timer, chronological (history step).
+  /// The CURRENT streak is never here: it is the live [startAt];
+  /// when it closes, it lands here. Records saved before the
+  /// history step load with an empty list.
+  final List<StreakRun> history;
+
   /// Sentinels so [copyWith] can set [name] and [glyph] back to
   /// null (the classic `x ?? this.x` could never clear them).
   static const Object _unset = Object();
@@ -77,6 +86,7 @@ class Tracker {
     Object? name = _unset,
     Set<String>? disabledMilestones,
     Set<String>? celebratedMilestones,
+    List<StreakRun>? history,
   }) {
     return Tracker(
       id: id ?? this.id,
@@ -86,6 +96,7 @@ class Tracker {
       name: identical(name, _unset) ? this.name : name as String?,
       disabledMilestones: disabledMilestones ?? this.disabledMilestones,
       celebratedMilestones: celebratedMilestones ?? this.celebratedMilestones,
+      history: history ?? this.history,
     );
   }
 }
