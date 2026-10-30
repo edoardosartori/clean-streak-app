@@ -172,7 +172,7 @@ class _EditorViewState extends State<_EditorView> {
     final String name = widget.tracker.name ?? 'this timer';
     final bool confirmed = await FusionDialog.confirm(
       context,
-      title: 'Delete timer?',
+      title: 'Delete streak?',
       message: 'Delete $name?\nThe streak is lost and cannot be undone.',
       confirmLabel: 'Delete',
       isDestructive: true,
@@ -261,7 +261,7 @@ class _EditorViewState extends State<_EditorView> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    widget.isNew ? 'New timer' : 'Edit timer',
+                    widget.isNew ? 'New streak' : 'Edit streak',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: tokens.dimension('component.dialog.titleSize'),
@@ -426,7 +426,7 @@ class _EditorViewState extends State<_EditorView> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Text(
-                            'Delete timer',
+                            'Delete',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,

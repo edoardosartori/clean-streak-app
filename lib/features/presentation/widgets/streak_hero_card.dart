@@ -53,7 +53,7 @@ class StreakHeroCard extends StatefulWidget {
   final Tracker tracker;
 
   /// Opens the tracker editor on this timer. The editor runs in
-  /// edit mode, so it also shows the "Delete timer" action.
+  /// edit mode, so it also shows the "Delete" action.
   final VoidCallback onEdit;
 
   /// Resets the streak (the caller asks for confirmation first).
@@ -277,7 +277,7 @@ class _StreakHeroCardState extends State<StreakHeroCard>
                     ),
                     _HeaderButton(
                       icon: Icons.edit_rounded,
-                      tooltip: 'Edit timer',
+                      tooltip: 'Edit streak',
                       tileColor: Colors.white.withValues(alpha: 0.14),
                       iconColor: Colors.white.withValues(alpha: 0.92),
                       onTap: widget.onEdit,
@@ -285,7 +285,7 @@ class _StreakHeroCardState extends State<StreakHeroCard>
                     const SizedBox(width: 8),
                     _HeaderButton(
                       icon: Icons.refresh_rounded,
-                      tooltip: 'Reset timer',
+                      tooltip: 'Reset streak',
                       tileColor: Colors.white.withValues(alpha: 0.14),
                       iconColor: Colors.white.withValues(alpha: 0.92),
                       onTap: widget.onReset,
@@ -509,7 +509,7 @@ class _StreakHeroCardState extends State<StreakHeroCard>
                 ),
                 _HeaderButton(
                   icon: Icons.edit_rounded,
-                  tooltip: 'Edit timer',
+                  tooltip: 'Edit streak',
                   tileColor: headerTile,
                   iconColor: headerIcon,
                   onTap: widget.onEdit,
@@ -517,7 +517,7 @@ class _StreakHeroCardState extends State<StreakHeroCard>
                 const SizedBox(width: 8),
                 _HeaderButton(
                   icon: Icons.refresh_rounded,
-                  tooltip: 'Reset timer',
+                  tooltip: 'Reset streak',
                   tileColor: headerTile,
                   iconColor: headerIcon,
                   onTap: widget.onReset,
