@@ -94,4 +94,70 @@ void main() {
       expect(controller.value.trackers.single.startAt, oct20);
     });
   });
+
+  group('moveTracker (drag reorder step)', () {
+    TrackerController threeTrackers() {
+      return TrackerController(
+        initial: AppState(
+          trackers: <Tracker>[
+            Tracker(id: 'a', scene: HeroScene.peaks, startAt: oct20),
+            Tracker(id: 'b', scene: HeroScene.ocean, startAt: oct20),
+            Tracker(id: 'c', scene: HeroScene.forest, startAt: oct20),
+          ],
+        ),
+      );
+    }
+
+    test('moves the card, the selection follows the selected tracker', () {
+      final TrackerController controller = threeTrackers();
+      controller.select(2);
+
+      controller.moveTracker(2, 0);
+
+      expect(
+        controller.value.trackers.map((Tracker t) => t.id),
+        ['c', 'a', 'b'],
+      );
+      // Same card selected as before the move.
+      expect(controller.value.selectedIndex, 0);
+      expect(
+        controller.value.trackers[controller.value.selectedIndex].id,
+        'c',
+      );
+    });
+
+    test('moving another card keeps the selected one selected', () {
+      final TrackerController controller = threeTrackers();
+      controller.select(0);
+
+      controller.moveTracker(2, 1);
+
+      expect(
+        controller.value.trackers.map((Tracker t) => t.id),
+        ['a', 'c', 'b'],
+      );
+      expect(controller.value.selectedIndex, 0);
+      expect(
+        controller.value.trackers[controller.value.selectedIndex].id,
+        'a',
+      );
+    });
+
+    test('a move to the same slot or an invalid index is a no-op', () {
+      final TrackerController controller = threeTrackers();
+      controller.select(0);
+      int notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.moveTracker(0, 0);
+      controller.moveTracker(9, 0);
+
+      expect(notifications, 0);
+      expect(
+        controller.value.trackers.map((Tracker t) => t.id),
+        ['a', 'b', 'c'],
+      );
+      expect(controller.value.selectedIndex, 0);
+    });
+  });
 }

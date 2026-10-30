@@ -105,6 +105,72 @@ void main() {
     expect(loaded.map((Tracker t) => t.id), ['good']);
   });
 
+  group('reorderTrackers (drag reorder step)', () {
+    test('a new order survives a full restart', () async {
+      final HiveTrackerRepository repository = await openRepository();
+      await repository.saveTracker(tracker('a', name: 'Alcohol'));
+      await repository.saveTracker(tracker('b'));
+      await repository.saveTracker(tracker('c', name: 'Sugar'));
+
+      await repository.reorderTrackers(['b', 'c', 'a']);
+
+      // Simulated app restart: close everything, re-init, re-open.
+      await Hive.close();
+      Hive.init(tempDir.path);
+      final HiveTrackerRepository reloaded = await openRepository();
+      final List<Tracker> loaded = await reloaded.loadTrackers();
+
+      expect(loaded, hasLength(3));
+      expect(loaded.map((Tracker t) => t.id), ['b', 'c', 'a']);
+      expect(loaded[0].name, isNull);
+      expect(loaded[2].name, 'Alcohol');
+    });
+
+    test('a reorder keeps the records intact, not just the order', () async {
+      final HiveTrackerRepository repository = await openRepository();
+      await repository.saveTracker(tracker('a', name: 'Alcohol'));
+      await repository.saveTracker(tracker('b', glyph: TimerGlyphId.cigarette));
+
+      await repository.reorderTrackers(['b', 'a']);
+
+      final List<Tracker> loaded = await repository.loadTrackers();
+      expect(loaded[0].id, 'b');
+      expect(loaded[0].glyph, TimerGlyphId.cigarette);
+      expect(loaded[1].name, 'Alcohol');
+      expect(loaded[1].disabledMilestones, {'2d'});
+    });
+
+    test('a tracker saved after a reorder lands at the end', () async {
+      final HiveTrackerRepository repository = await openRepository();
+      await repository.saveTracker(tracker('a'));
+      await repository.saveTracker(tracker('b'));
+
+      await repository.reorderTrackers(['b', 'a']);
+      await repository.saveTracker(tracker('c', name: 'Sugar'));
+
+      final List<Tracker> loaded = await repository.loadTrackers();
+      expect(loaded.map((Tracker t) => t.id), ['b', 'a', 'c']);
+    });
+
+    test('an id list that does not match the stored ids is a no-op',
+        () async {
+      final HiveTrackerRepository repository = await openRepository();
+      await repository.saveTracker(tracker('a'));
+      await repository.saveTracker(tracker('b'));
+
+      // Unknown id.
+      await repository.reorderTrackers(['a', 'nope']);
+      // Wrong count.
+      await repository.reorderTrackers(['a']);
+      // Duplicate.
+      await repository.reorderTrackers(['a', 'a']);
+
+      final List<Tracker> loaded = await repository.loadTrackers();
+      expect(loaded, hasLength(2));
+      expect(loaded.map((Tracker t) => t.id), ['a', 'b']);
+    });
+  });
+
   test('codec round-trips a minimal tracker without name or glyph', () {
     final Tracker minimal = Tracker(
       id: 't1',

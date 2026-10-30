@@ -1,5 +1,3 @@
-// FILE (SOSTITUISCE): lib/features/domain/history_stats_test.dart
-
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:clean_streak/features/domain/history_stats.dart';
@@ -110,7 +108,8 @@ void main() {
       final DateTime aug4 = DateTime(2026, 8, 4);
       final List<HistorySample> series = computeHistorySeries(
         history: <StreakRun>[
-          StreakRun(startedAt: aug4, endedAt: aug4.add(const Duration(days: 2))),
+          StreakRun(
+              startedAt: aug4, endedAt: aug4.add(const Duration(days: 2))),
           StreakRun(startedAt: aug1, endedAt: aug4),
         ],
         currentStartAt: aug4.add(const Duration(days: 2)),
@@ -144,7 +143,8 @@ void main() {
     final DateTime oct27 = DateTime(2026, 10, 27); // 3 days ago
     final DateTime oct30 = DateTime(2026, 10, 30); // today
 
-    test('rule 1: a streak of 5 days corrected to 3 days ago closes into 2', () {
+    test('rule 1: a streak of 5 days corrected to 3 days ago closes into 2',
+        () {
       final List<StreakRun> history = correctedHistory(
         history: const <StreakRun>[],
         previousStartAt: oct25,
@@ -157,7 +157,8 @@ void main() {
       expect(history.single.wholeDays, 2);
     });
 
-    test('rule 1 on a closed run: 5 days become 2, ending at the new start', () {
+    test('rule 1 on a closed run: 5 days become 2, ending at the new start',
+        () {
       // The run was closed too late (it ends today); the relapse
       // set to 3 days ago lands inside it: the credible days
       // before the relapse stay, the run ends where the 3 days
@@ -203,7 +204,8 @@ void main() {
     test('runs that ended before the correction stay (the teeth)', () {
       final List<StreakRun> history = correctedHistory(
         history: <StreakRun>[
-          StreakRun(startedAt: sep1, endedAt: sep1.add(const Duration(days: 4))),
+          StreakRun(
+              startedAt: sep1, endedAt: sep1.add(const Duration(days: 4))),
         ],
         previousStartAt: oct30,
         newStartAt: oct27,

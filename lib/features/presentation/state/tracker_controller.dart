@@ -49,6 +49,11 @@ import 'app_state.dart';
 /// Delete step: deleteRun removes ONE closed run from a
 /// tracker's history — the manual repair hatch for a tooth
 /// logged by mistake.
+///
+/// Tab order (drag reorder step): the repository keeps an explicit
+/// order record (Hive never moves an existing key inside the
+/// box), so a reorder just rewrites that; the selection follows
+/// the selected tracker wherever it lands.
 class TrackerController extends ValueNotifier<AppState> {
   TrackerController({
     AppState? initial,
@@ -169,6 +174,43 @@ class TrackerController extends ValueNotifier<AppState> {
     _pushBackup();
   }
 
+  /// Drag-reorder of the tabs: the tracker at [from] lands at
+  /// [to] (its final slot). The selection follows the selected
+  /// tracker (the PageView keeps showing the same card), the new
+  /// order is persisted (the repository's explicit order record)
+  /// and travels in the Drive snapshot (the backup list keeps
+  /// the order). No notification re-plan: the ids and their
+  /// milestone plans do not change.
+  void moveTracker(int from, int to) {
+    final List<Tracker> trackers = List<Tracker>.of(value.trackers);
+    if (from < 0 || from >= trackers.length) {
+      return;
+    }
+    final int target = to.clamp(0, trackers.length - 1);
+    if (target == from) {
+      return;
+    }
+    final int selectedIndex =
+        value.selectedIndex.clamp(0, trackers.length - 1);
+    final String selectedId = trackers[selectedIndex].id;
+    final Tracker moved = trackers.removeAt(from);
+    trackers.insert(target, moved);
+    final int selected = trackers.indexWhere(
+      (Tracker t) => t.id == selectedId,
+    );
+    value = value.copyWith(
+      trackers: trackers,
+      selectedIndex: selected < 0 ? value.selectedIndex : selected,
+    );
+    final TrackerRepository? repository = _repository;
+    if (repository != null) {
+      unawaited(repository.reorderTrackers(<String>[
+        for (final Tracker t in trackers) t.id,
+      ]));
+    }
+    _pushBackup();
+  }
+
   /// Removes one closed run from the history (delete step): the
   /// manual repair hatch for a tooth logged by mistake. The UI
   /// confirms with FusionDialog (destructive) before calling; the
@@ -205,6 +247,9 @@ class TrackerController extends ValueNotifier<AppState> {
   /// (the push is the restored content itself: last write wins,
   /// also when the local copy was newer). The restored trackers
   /// bring their own history with them: nothing is closed here.
+  /// The tab order of the restored list is enforced on the box
+  /// too (drag reorder step): a plain save never moves an
+  /// existing record in place.
   void replaceAll(List<Tracker> trackers) {
     final Set<String> removedIds = <String>{
       for (final Tracker t in value.trackers) t.id,
@@ -222,6 +267,9 @@ class TrackerController extends ValueNotifier<AppState> {
       for (final Tracker tracker in trackers) {
         unawaited(repository.saveTracker(tracker));
       }
+      unawaited(repository.reorderTrackers(<String>[
+        for (final Tracker tracker in trackers) tracker.id,
+      ]));
     }
     _rescheduleNotifications();
     _pushBackup();
