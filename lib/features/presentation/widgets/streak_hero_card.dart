@@ -1,10 +1,9 @@
-// FILE (SOSTITUISCE): lib/features/presentation/widgets/streak_hero_card.dart
-
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import '../../../core/feedback/fusion_dialog.dart';
 import '../../../core/theme/fusion_motion.dart';
 import '../../../core/theme/fusion_theme_extension.dart';
 import '../../../core/theme/fusion_tokens_scope.dart';
@@ -12,6 +11,7 @@ import '../../domain/history_stats.dart';
 import '../../domain/milestone_catalog.dart';
 import '../../domain/milestone_engine.dart';
 import '../../domain/streak_calculator.dart';
+import '../../models/streak_run.dart';
 import '../../models/tracker.dart';
 import 'history_chart.dart';
 import 'scene_painter.dart';
@@ -25,11 +25,16 @@ import 'timer_glyph.dart';
 ///
 /// History step — the flip: tapping the card body flips it 180
 /// on the Y axis. The back is the streak history: the sawtooth
-/// line chart (computeHistorySeries) plus the three aggregate
+/// line chart (computeHistorySeries) plus the aggregate
 /// stats (computeHistoryStats). The flip is EPHEMERAL by
 /// decision: the angle lives in this State, so swiping away in
 /// the PageView disposes it and a fresh page always starts from
 /// the front.
+///
+/// Delete step — on the back, tapping a TOOTH of the chart opens
+/// a destructive confirm and removes that one closed run
+/// (onDeleteRun); tapping the chart outside a closed run keeps
+/// the flip behavior, so the body stays the flip target too.
 ///
 /// The counter block sits on a frosted panel (ink at 45% plus the
 /// dialog scrim blur, both from fusion-tokens.json) so the data
@@ -42,6 +47,7 @@ class StreakHeroCard extends StatefulWidget {
     required this.tracker,
     required this.onEdit,
     required this.onReset,
+    required this.onDeleteRun,
   });
 
   final Tracker tracker;
@@ -52,6 +58,11 @@ class StreakHeroCard extends StatefulWidget {
 
   /// Resets the streak (the caller asks for confirmation first).
   final VoidCallback onReset;
+
+  /// Deletes one closed run from the history (delete step). The
+  /// card asks for confirmation first (FusionDialog,
+  /// destructive); the caller routes it to the controller.
+  final void Function(StreakRun run) onDeleteRun;
 
   @override
   State<StreakHeroCard> createState() => _StreakHeroCardState();
@@ -85,6 +96,35 @@ class _StreakHeroCardState extends State<StreakHeroCard>
       _flip.reverse();
     } else {
       _flip.forward();
+    }
+  }
+
+  /// Delete step — the chart's tap: a closed run under the finger
+  /// opens the destructive confirm; anything else keeps the flip
+  /// behavior (the body of the card stays the flip target).
+  void _onChartTap(StreakRun? run) {
+    if (run == null) {
+      _toggleFlip();
+      return;
+    }
+    _confirmDeleteRun(run);
+  }
+
+  /// The repair hatch (delete step): removing one tooth of the
+  /// sawtooth, confirmed by the destructive FusionDialog.
+  Future<void> _confirmDeleteRun(StreakRun run) async {
+    final int days = run.wholeDays;
+    final bool confirmed = await FusionDialog.confirm(
+      context,
+      title: 'Delete this step?',
+      message: '${_shortDate(run.startedAt)} - ${_shortDate(run.endedAt)} · '
+          '$days ${days == 1 ? 'day' : 'days'} of clean history.\n'
+          'This cannot be undone.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
+    );
+    if (confirmed && mounted) {
+      widget.onDeleteRun(run);
     }
   }
 
@@ -334,8 +374,7 @@ class _StreakHeroCardState extends State<StreakHeroCard>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _capitalize(
-                                  snapshot.current!.definition.label),
+                              _capitalize(snapshot.current!.definition.label),
                               style: const TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w500,
@@ -371,8 +410,7 @@ class _StreakHeroCardState extends State<StreakHeroCard>
                           ),
                           FractionallySizedBox(
                             alignment: Alignment.centerLeft,
-                            widthFactor:
-                                shownProgress.clamp(0.0, 1.0),
+                            widthFactor: shownProgress.clamp(0.0, 1.0),
                             child: SizedBox.expand(
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
@@ -410,12 +448,7 @@ class _StreakHeroCardState extends State<StreakHeroCard>
 
   Widget _buildBackFace(BuildContext context) {
     final theme = Theme.of(context);
-    final tokens = FusionTokensScope.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
-
-    final Color secondary = tokens.color(
-      isDark ? 'semantic.dark.textSecondary' : 'semantic.light.textSecondary',
-    );
 
     // Same header as the front (decision: identical row), but
     // the frosted-white button recipe would vanish on the light
@@ -440,6 +473,9 @@ class _StreakHeroCardState extends State<StreakHeroCard>
       currentStartAt: widget.tracker.startAt,
       now: now,
     );
+
+    // The closed runs, for the chart's tap map (delete step).
+    final List<StreakRun> runs = validRunsSorted(widget.tracker.history);
 
     return ColoredBox(
       // Plain Fusion card surface: the scene belongs to the front.
@@ -501,14 +537,15 @@ class _StreakHeroCardState extends State<StreakHeroCard>
                     ),
                   ),
                 ),
-                // Quiet echo of the flip affordance: the whole
-                // body is the tap target, the icon only hints it.
-                Icon(Icons.flip, size: 18, color: secondary),
               ],
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: StreakHistoryChart(series: series),
+              child: StreakHistoryChart(
+                series: series,
+                runs: runs,
+                onRunTapped: _onChartTap,
+              ),
             ),
             const SizedBox(height: 16),
             Row(
@@ -516,10 +553,6 @@ class _StreakHeroCardState extends State<StreakHeroCard>
                 _HistoryStat(
                   value: '${stats.bestRunDays}',
                   label: 'Best run',
-                ),
-                _HistoryStat(
-                  value: '${stats.totalCleanDays}',
-                  label: 'Clean days',
                 ),
                 _HistoryStat(
                   value: '${stats.resetCount}',
@@ -572,6 +605,25 @@ class _StreakHeroCardState extends State<StreakHeroCard>
   }
 
   static String _twoDigits(int n) => n.toString().padLeft(2, '0');
+
+  static const List<String> _months = <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  /// "Oct 5" — same shape as the chart's X labels, for the
+  /// delete confirm message.
+  static String _shortDate(DateTime at) => '${_months[at.month - 1]} ${at.day}';
 
   static String _capitalize(String s) =>
       s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';

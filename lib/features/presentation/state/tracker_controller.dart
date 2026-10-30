@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../data/notifications/milestone_scheduler.dart';
 import '../../data/remote/remote_backup.dart';
 import '../../data/tracker_repository.dart';
+import '../../domain/history_stats.dart';
 import '../../domain/milestone_engine.dart';
 import '../../domain/milestone_notification_planner.dart';
 import '../../models/streak_run.dart';
@@ -36,10 +37,18 @@ import 'app_state.dart';
 /// the uploads. Until the user signed in manually the wired
 /// service is a Noop, so nothing happens.
 ///
-/// History (step 8): when the streak start moves forward (instant
-/// reset, relapse at a later date) the run the old streak is
-/// closing is appended to the tracker's history BEFORE the new
-/// start lands.
+/// History (step 8): the streak start moving closes and corrects
+/// the history through the pure domain helper correctedHistory
+/// (the user rules live there, tested in history_stats_test): a
+/// forward move closes the old streak into a run ending at the
+/// new start (5 days -> 3 days leaves a 2 day run); a backward
+/// move logs nothing for the old streak (the 3 days vanish) and
+/// corrects the closed runs — shortened to the boundary when they
+/// contain it, removed when they sit inside the corrected period.
+///
+/// Delete step: deleteRun removes ONE closed run from a
+/// tracker's history — the manual repair hatch for a tooth
+/// logged by mistake.
 class TrackerController extends ValueNotifier<AppState> {
   TrackerController({
     AppState? initial,
@@ -160,6 +169,35 @@ class TrackerController extends ValueNotifier<AppState> {
     _pushBackup();
   }
 
+  /// Removes one closed run from the history (delete step): the
+  /// manual repair hatch for a tooth logged by mistake. The UI
+  /// confirms with FusionDialog (destructive) before calling; the
+  /// run is matched by its start AND end, so an index can never
+  /// point at the wrong tooth. The live streak is never touched:
+  /// it is not a run. A no-op (silent) when the tracker or the run
+  /// is not there.
+  void deleteRun(String id, StreakRun run) {
+    final List<Tracker> trackers = List<Tracker>.of(value.trackers);
+    final int i = trackers.indexWhere((Tracker t) => t.id == id);
+    if (i == -1) {
+      return;
+    }
+    final Tracker previous = trackers[i];
+    final List<StreakRun> next = <StreakRun>[
+      for (final StreakRun r in previous.history)
+        if (r.startedAt != run.startedAt || r.endedAt != run.endedAt) r,
+    ];
+    if (next.length == previous.history.length) {
+      return;
+    }
+    final Tracker stored = previous.copyWith(history: next);
+    trackers[i] = stored;
+    value = value.copyWith(trackers: trackers);
+    _save(stored);
+    _rescheduleNotifications();
+    _pushBackup();
+  }
+
   /// Full local replacement from a Drive restore (step 5). The
   /// restored list becomes the state, the ids that disappeared
   /// are deleted from Hive, everything else is saved, and both
@@ -189,20 +227,15 @@ class TrackerController extends ValueNotifier<AppState> {
     _pushBackup();
   }
 
-  /// History (history step): the run the current streak is about
-  /// to close, when the start moves forward (instant reset or a
-  /// relapse set at a later date). A relapse set BEFORE the
-  /// current start rewrites the streak backwards: nothing closed,
-  /// nothing logged (the codec and the stats would drop such a
-  /// run anyway).
+  /// History (history step): fully delegated to the pure domain
+  /// helper correctedHistory — the two user rules (forward close,
+  /// backward vanish) plus the correction of the closed runs.
   List<StreakRun> _closedHistory(Tracker previous, DateTime newStartAt) {
-    if (!newStartAt.isAfter(previous.startAt)) {
-      return previous.history;
-    }
-    return <StreakRun>[
-      ...previous.history,
-      StreakRun(startedAt: previous.startAt, endedAt: newStartAt),
-    ];
+    return correctedHistory(
+      history: previous.history,
+      previousStartAt: previous.startAt,
+      newStartAt: newStartAt,
+    );
   }
 
   /// Celebration state maintenance (celebration step):

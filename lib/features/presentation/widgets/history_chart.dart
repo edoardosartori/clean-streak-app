@@ -1,5 +1,3 @@
-// FILE (NUOVO): lib/features/presentation/widgets/history_chart.dart
-
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -7,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/fusion_theme_extension.dart';
 import '../../../core/theme/fusion_tokens_scope.dart';
 import '../../domain/history_stats.dart';
+import '../../models/streak_run.dart';
 
 /// Line chart of the streak history (history step): the sawtooth
 /// day by day — every streak climbs from zero, drops to zero where
@@ -17,15 +16,37 @@ import '../../domain/history_stats.dart';
 /// active element of the screen (suite rule): stateActive line,
 /// stateActiveTint fill, glow in dark only.
 ///
+/// Delete step: the chart is also the tap target for deleting a
+/// step — a tap on a closed run reports that run through
+/// onRunTapped; a tap anywhere else reports null (the caller
+/// falls back to the flip). The mapping is the exact inverse of
+/// the painter's math, so a tap always lands on the tooth the
+/// finger sees.
+///
 /// The painter never repaints on the 1s tick: samples are
 /// compared day by day, and within a day the line would only move
 /// by a fraction of a pixel (the "now" point is pinned to the
 /// right edge regardless of the time of day).
 class StreakHistoryChart extends StatelessWidget {
-  const StreakHistoryChart({super.key, required this.series});
+  const StreakHistoryChart({
+    super.key,
+    required this.series,
+    required this.runs,
+    this.onRunTapped,
+  });
 
   /// Chronological samples, straight from computeHistorySeries.
   final List<HistorySample> series;
+
+  /// The closed runs (validRunsSorted) — the tap map. Only the
+  /// runs are tappable: the live streak (the last rise, up to
+  /// "Now") never reports a run.
+  final List<StreakRun> runs;
+
+  /// Reports the closed run under the tap, or null when the tap
+  /// landed on the live streak, on a gap between teeth, or
+  /// outside the plot area. Null when the whole feature is off.
+  final void Function(StreakRun? run)? onRunTapped;
 
   @override
   Widget build(BuildContext context) {
@@ -38,18 +59,39 @@ class StreakHistoryChart extends StatelessWidget {
       isDark ? 'semantic.dark.textSecondary' : 'semantic.light.textSecondary',
     );
 
-    return CustomPaint(
-      painter: HistoryChartPainter(
-        series: series,
-        lineColor: ext.stateActive,
-        fillColor: ext.stateActiveTint,
-        gridColor: isDark
-            ? ext.border
-            : const Color(0xFF12161B).withValues(alpha: 0.08),
-        labelColor: secondary,
-        glow: isDark,
+    return GestureDetector(
+      // The whole chart is the tap target: the column under the
+      // finger decides what was hit (thin teeth stay tappable
+      // even when they are a few pixels wide).
+      onTapUp: onRunTapped == null
+          ? null
+          : (TapUpDetails details) {
+              final Size? size = context.size;
+              if (size == null) {
+                return;
+              }
+              onRunTapped!(
+                HistoryChartPainter.runAtPosition(
+                  runs: runs,
+                  series: series,
+                  size: size,
+                  position: details.localPosition,
+                ),
+              );
+            },
+      child: CustomPaint(
+        painter: HistoryChartPainter(
+          series: series,
+          lineColor: ext.stateActive,
+          fillColor: ext.stateActiveTint,
+          gridColor: isDark
+              ? ext.border
+              : const Color(0xFF12161B).withValues(alpha: 0.08),
+          labelColor: secondary,
+          glow: isDark,
+        ),
+        child: const SizedBox.expand(),
       ),
-      child: const SizedBox.expand(),
     );
   }
 }
@@ -114,6 +156,59 @@ class HistoryChartPainter extends CustomPainter {
 
   static String _shortDate(DateTime at) => '${_months[at.month - 1]} ${at.day}';
 
+  /// Maps a tap to the closed run under it (delete step): the
+  /// exact inverse of the paint math — same insets, same domain
+  /// sweep — so drawing and tap can never disagree. The whole
+  /// vertical column counts (a thin tooth stays tappable). Null
+  /// when the tap lands on the live streak, on a gap between
+  /// teeth, or outside the plot area.
+  static StreakRun? runAtPosition({
+    required List<StreakRun> runs,
+    required List<HistorySample> series,
+    required Size size,
+    required Offset position,
+  }) {
+    if (series.length < 2 || size.width < 60 || size.height < 40) {
+      return null;
+    }
+    final Rect area = Rect.fromLTRB(
+      _leftInset,
+      _topInset,
+      size.width - _rightInset,
+      size.height - _bottomInset,
+    );
+    if (position.dx < area.left || position.dx > area.right) {
+      return null;
+    }
+
+    DateTime firstAt = series.first.at;
+    DateTime lastAt = firstAt;
+    for (final HistorySample sample in series) {
+      if (sample.at.isBefore(firstAt)) {
+        firstAt = sample.at;
+      }
+      if (sample.at.isAfter(lastAt)) {
+        lastAt = sample.at;
+      }
+    }
+    final int firstMs = firstAt.millisecondsSinceEpoch;
+    final int spanMs = math.max(
+      1,
+      lastAt.millisecondsSinceEpoch - firstMs,
+    );
+
+    final double t = (position.dx - area.left) / area.width;
+    final DateTime at = DateTime.fromMillisecondsSinceEpoch(
+      firstMs + (t * spanMs).round(),
+    );
+    for (final StreakRun run in runs) {
+      if (!at.isBefore(run.startedAt) && !at.isAfter(run.endedAt)) {
+        return run;
+      }
+    }
+    return null;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     if (series.length < 2 || size.width < 60 || size.height < 40) {
@@ -135,11 +230,25 @@ class HistoryChartPainter extends CustomPainter {
     }
     final int yMax = _niceCeil(maxDays);
 
-    final DateTime firstAt = series.first.at;
+    // Domain: normally the first and the last sample bound the
+    // data. The sweep below only matters for stale overlap
+    // records (a restored run that ends after the current start),
+    // where a sample can precede the first run: those days are
+    // pulled into view instead of flying off-canvas on the left.
+    DateTime firstAt = series.first.at;
+    DateTime lastAt = firstAt;
+    for (final HistorySample sample in series) {
+      if (sample.at.isBefore(firstAt)) {
+        firstAt = sample.at;
+      }
+      if (sample.at.isAfter(lastAt)) {
+        lastAt = sample.at;
+      }
+    }
     final int firstMs = firstAt.millisecondsSinceEpoch;
     final int spanMs = math.max(
       1,
-      series.last.at.millisecondsSinceEpoch - firstMs,
+      lastAt.millisecondsSinceEpoch - firstMs,
     );
 
     double xOf(DateTime at) =>
@@ -198,7 +307,7 @@ class HistoryChartPainter extends CustomPainter {
     canvas.drawPath(line, stroke);
 
     // X axis: first date on the left, "Now" pinned to the right.
-    _label(canvas, _shortDate(series.first.at), area.left, area.bottom + 10);
+    _label(canvas, _shortDate(firstAt), area.left, area.bottom + 10);
     _label(canvas, 'Now', area.right, area.bottom + 10, alignRight: true);
   }
 

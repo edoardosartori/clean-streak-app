@@ -315,6 +315,8 @@ class _PortraitLayoutState extends State<PortraitLayout> {
                                       tracker: tracker,
                                       onEdit: () => _openEditor(isNew: false),
                                       onReset: () => _confirmReset(tracker),
+                                      onDeleteRun: (run) =>
+                                          controller.deleteRun(tracker.id, run),
                                     ),
                                   ),
                                   const SizedBox(height: 16),

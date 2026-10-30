@@ -1,3 +1,5 @@
+// FILE (SOSTITUISCE): lib/features/domain/history_stats_test.dart
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:clean_streak/features/domain/history_stats.dart';
@@ -15,7 +17,6 @@ void main() {
       );
 
       expect(stats.bestRunDays, 4);
-      expect(stats.totalCleanDays, 4);
       expect(stats.resetCount, 0);
     });
 
@@ -36,7 +37,6 @@ void main() {
       );
 
       expect(stats.bestRunDays, 12);
-      expect(stats.totalCleanDays, 19);
       expect(stats.resetCount, 2);
     });
 
@@ -53,7 +53,6 @@ void main() {
       );
 
       expect(stats.bestRunDays, 27);
-      expect(stats.totalCleanDays, 29);
       expect(stats.resetCount, 1);
     });
 
@@ -71,7 +70,6 @@ void main() {
       );
 
       expect(stats.bestRunDays, 2);
-      expect(stats.totalCleanDays, 2);
       expect(stats.resetCount, 0);
     });
   });
@@ -133,6 +131,137 @@ void main() {
       );
 
       expect(series, isEmpty);
+    });
+  });
+
+  group('correctedHistory', () {
+    // The user's examples (today = Oct 30, 2026).
+    final DateTime oct5 = DateTime(2026, 10, 5);
+    final DateTime oct8 = DateTime(2026, 10, 8);
+    final DateTime oct10 = DateTime(2026, 10, 10);
+    final DateTime oct20 = DateTime(2026, 10, 20);
+    final DateTime oct25 = DateTime(2026, 10, 25); // 5 days ago
+    final DateTime oct27 = DateTime(2026, 10, 27); // 3 days ago
+    final DateTime oct30 = DateTime(2026, 10, 30); // today
+
+    test('rule 1: a streak of 5 days corrected to 3 days ago closes into 2', () {
+      final List<StreakRun> history = correctedHistory(
+        history: const <StreakRun>[],
+        previousStartAt: oct25,
+        newStartAt: oct27,
+      );
+
+      expect(history, hasLength(1));
+      expect(history.single.startedAt, oct25);
+      expect(history.single.endedAt, oct27);
+      expect(history.single.wholeDays, 2);
+    });
+
+    test('rule 1 on a closed run: 5 days become 2, ending at the new start', () {
+      // The run was closed too late (it ends today); the relapse
+      // set to 3 days ago lands inside it: the credible days
+      // before the relapse stay, the run ends where the 3 days
+      // begin.
+      final List<StreakRun> history = correctedHistory(
+        history: <StreakRun>[
+          StreakRun(startedAt: oct25, endedAt: oct30),
+        ],
+        previousStartAt: oct30,
+        newStartAt: oct27,
+      );
+
+      expect(history, hasLength(1));
+      expect(history.single.startedAt, oct25);
+      expect(history.single.endedAt, oct27);
+      expect(history.single.wholeDays, 2);
+    });
+
+    test('rule 2: a 3 day streak reset to 5 days ago vanishes', () {
+      final List<StreakRun> history = correctedHistory(
+        history: const <StreakRun>[],
+        previousStartAt: oct27,
+        newStartAt: oct25,
+      );
+
+      expect(history, isEmpty);
+    });
+
+    test('rule 2 on a closed run: a run inside the correction goes', () {
+      // The run [Oct 27 -> today] sits entirely inside the
+      // corrected streak [Oct 25 -> now]: not credible, gone.
+      final List<StreakRun> history = correctedHistory(
+        history: <StreakRun>[
+          StreakRun(startedAt: oct27, endedAt: oct30),
+        ],
+        previousStartAt: oct30,
+        newStartAt: oct25,
+      );
+
+      expect(history, isEmpty);
+    });
+
+    test('runs that ended before the correction stay (the teeth)', () {
+      final List<StreakRun> history = correctedHistory(
+        history: <StreakRun>[
+          StreakRun(startedAt: sep1, endedAt: sep1.add(const Duration(days: 4))),
+        ],
+        previousStartAt: oct30,
+        newStartAt: oct27,
+      );
+
+      expect(history, hasLength(1));
+      expect(history.single.startedAt, sep1);
+    });
+
+    test('a run ending exactly at the new start stays', () {
+      final List<StreakRun> history = correctedHistory(
+        history: <StreakRun>[
+          StreakRun(startedAt: oct5, endedAt: oct27),
+        ],
+        previousStartAt: oct30,
+        newStartAt: oct27,
+      );
+
+      expect(history, hasLength(1));
+      expect(history.single.endedAt, oct27);
+    });
+
+    test('a stale run covered by the closing run is shortened to it', () {
+      // Forward move over a stale record: the stale run ends after
+      // the old start, so its credible days are only the ones
+      // before it — then the closing run takes over.
+      final List<StreakRun> history = correctedHistory(
+        history: <StreakRun>[
+          StreakRun(startedAt: oct5, endedAt: oct10),
+        ],
+        previousStartAt: oct8,
+        newStartAt: oct20,
+      );
+
+      expect(history, hasLength(2));
+      expect(history[0].startedAt, oct5);
+      expect(history[0].endedAt, oct8);
+      expect(history[1].startedAt, oct8);
+      expect(history[1].endedAt, oct20);
+    });
+
+    test('rule 1 end to end: a 2 day tooth and a 3 day live streak', () {
+      final List<StreakRun> history = correctedHistory(
+        history: <StreakRun>[
+          StreakRun(startedAt: oct25, endedAt: oct30),
+        ],
+        previousStartAt: oct30,
+        newStartAt: oct27,
+      );
+
+      final HistoryStats stats = computeHistoryStats(
+        history: history,
+        currentStartAt: oct27,
+        now: oct30,
+      );
+
+      expect(stats.bestRunDays, 3);
+      expect(stats.resetCount, 1);
     });
   });
 }
