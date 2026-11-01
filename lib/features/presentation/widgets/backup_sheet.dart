@@ -71,6 +71,27 @@ Future<void> showBackupSheet(
   );
 }
 
+/// Error dialog with the standard message and, when technical
+/// details are available, a small "Show error details" link that
+/// opens them: the real cause of a failed backup must be
+/// readable on the phone, not only in logs.
+Future<void> _showBackupError(
+  BuildContext context, {
+  required String title,
+  required String message,
+  String? details,
+}) {
+  return showDialog<void>(
+    context: context,
+    barrierColor: Colors.transparent,
+    builder: (context) => _ErrorDialog(
+      title: title,
+      message: message,
+      details: details,
+    ),
+  );
+}
+
 /// Full-screen scrim (FusionDialog recipe: backdrop blur +
 /// ext.scrim) with the centered sheet on top. A tap on the scrim
 /// closes the sheet, a tap on the sheet does not.
@@ -390,10 +411,11 @@ class _BackupSheet extends StatelessWidget {
       signedIn = await backup.signIn();
     } on DriveBackupException catch (error) {
       if (context.mounted) {
-        await FusionDialog.show(
+        await _showBackupError(
           context,
           title: 'Sign-in failed',
           message: error.message,
+          details: error.details,
         );
       }
       return;
@@ -431,7 +453,10 @@ class _BackupSheet extends StatelessWidget {
         return;
       }
     }
-    final bool ok = await backup.pushSnapshot(controller.value.trackers);
+    // Manual path: the service may show the Drive consent prompt
+    // when the authorization is missing or stale (the automatic
+    // mirror stays silent and uses pushSnapshot instead).
+    final bool ok = await backup.backupNow(controller.value.trackers);
     if (!context.mounted) {
       return;
     }
@@ -439,10 +464,11 @@ class _BackupSheet extends StatelessWidget {
       Navigator.of(context).pop();
       onBackedUp();
     } else {
-      await FusionDialog.show(
+      await _showBackupError(
         context,
         title: 'Backup failed',
         message: 'Check the connection and try again.',
+        details: backup.lastPushErrorDetails,
       );
     }
   }
@@ -482,10 +508,11 @@ class _BackupSheet extends StatelessWidget {
       Navigator.of(context).pop();
     } on DriveBackupException catch (error) {
       if (context.mounted) {
-        await FusionDialog.show(
+        await _showBackupError(
           context,
           title: 'Restore failed',
           message: error.message,
+          details: error.details,
         );
       }
     }
@@ -495,6 +522,259 @@ class _BackupSheet extends StatelessWidget {
     await backup.signOut();
     // The AnimatedBuilder rebuilds the sheet back to the
     // not-connected state on the service notification.
+  }
+}
+
+/// Error dialog on the FusionDialog recipe (backdrop blur +
+/// scrim + surface + border dark / shadow light). When details
+/// are available it shows the "Show error details" link; the
+/// details dialog on top displays them selectable, in mono.
+class _ErrorDialog extends StatelessWidget {
+  const _ErrorDialog({
+    required this.title,
+    required this.message,
+    this.details,
+  });
+
+  final String title;
+  final String message;
+  final String? details;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final FusionThemeExtension ext = theme.extension<FusionThemeExtension>()!;
+    final tokens = FusionTokensScope.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    final Color secondary = tokens.color(
+      isDark ? 'semantic.dark.textSecondary' : 'semantic.light.textSecondary',
+    );
+    final double blur =
+        tokens.dimension('component.dialog.scrimBlur').toDouble();
+
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).pop(),
+        child: SizedBox.expand(
+          child: Container(
+            color: ext.scrim,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 36),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {},
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 340,
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: isDark ? Border.all(color: ext.border) : null,
+                    boxShadow: isDark
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: const Color(0xFF12161B)
+                                  .withValues(alpha: 0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        message,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          height: 1.5,
+                          color: secondary,
+                        ),
+                      ),
+                      if (details != null) ...<Widget>[
+                        const SizedBox(height: 4),
+                        TextButton(
+                          onPressed: () => showDialog<void>(
+                            context: context,
+                            barrierColor: Colors.transparent,
+                            builder: (context) => _ErrorDetailsDialog(
+                              details: details!,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: secondary,
+                            minimumSize: const Size.fromHeight(36),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 4),
+                          ),
+                          child: const Text(
+                            'Show error details',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'OK',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The full technical details of a failure: selectable mono text
+/// (suite rule for data), scrollable when long.
+class _ErrorDetailsDialog extends StatelessWidget {
+  const _ErrorDetailsDialog({required this.details});
+
+  final String details;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final FusionThemeExtension ext = theme.extension<FusionThemeExtension>()!;
+    final tokens = FusionTokensScope.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    final Color secondary = tokens.color(
+      isDark ? 'semantic.dark.textSecondary' : 'semantic.light.textSecondary',
+    );
+    final double blur =
+        tokens.dimension('component.dialog.scrimBlur').toDouble();
+
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).pop(),
+        child: SizedBox.expand(
+          child: Container(
+            color: ext.scrim,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 36),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {},
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 340,
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: isDark ? Border.all(color: ext.border) : null,
+                    boxShadow: isDark
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: const Color(0xFF12161B)
+                                  .withValues(alpha: 0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        Text(
+                          'Error details',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Flexible(
+                          child: SingleChildScrollView(
+                            child: SelectableText(
+                              details,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                height: 1.4,
+                                fontFamily: 'JetBrains Mono',
+                                color: secondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: theme.colorScheme.primary,
+                            foregroundColor: theme.colorScheme.onPrimary,
+                            minimumSize: const Size.fromHeight(48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'OK',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -44,26 +44,56 @@ abstract class TrackerBackupService extends ChangeNotifier {
 
   Future<void> signOut();
 
-  /// Uploads the full snapshot, last write wins. Never throws:
-  /// false when not signed in or when the upload fails (the
-  /// automatic mirror ignores the result, the manual button
+  /// Silent upload of the full snapshot, last write wins. Never
+  /// throws and never shows any UI: the automatic mirror uses
+  /// this after every mutation. False when not signed in or
+  /// when the silent authorization fails (the manual button
   /// shows the error).
   Future<bool> pushSnapshot(List<Tracker> trackers);
 
+  /// Manual, user-initiated backup ("Back up now"): unlike
+  /// [pushSnapshot] this may show the Drive consent prompt when
+  /// the authorization is missing, or when the cached token has
+  /// gone stale (revoked from the account settings). A prompt
+  /// always starts from a user tap, so the automatic mirror must
+  /// use [pushSnapshot] instead.
+  Future<bool> backupNow(List<Tracker> trackers);
+
+  /// Technical details of the last failed [pushSnapshot] or
+  /// [backupNow] (null after a successful one): the backup sheet
+  /// shows them on "Show error details".
+  String? get lastPushErrorDetails;
+
   /// Downloads and decodes the snapshot, or null when Drive has
   /// nothing stored yet. Throws [DriveBackupException] on
-  /// failure: it only runs from manual actions.
+  /// failure: it only runs from manual actions, so it may show
+  /// the consent prompt when the authorization is missing or
+  /// stale.
   Future<List<Tracker>?> pullSnapshot();
 }
 
 /// Failure with a user-facing message.
 class DriveBackupException implements Exception {
-  const DriveBackupException(this.message);
+  const DriveBackupException(
+    this.message, {
+    this.details,
+    this.statusCode,
+  });
 
   final String message;
 
+  /// Technical cause of the failure (real exception, HTTP
+  /// status, response body). Not user-facing: the sheet shows
+  /// it only on "Show error details".
+  final String? details;
+
+  /// HTTP status of the failed Drive request, when the failure
+  /// came from one (401 = stale/invalid token, 403 = missing
+  /// scope).
+  final int? statusCode;
+
   @override
-  String toString() => message;
+  String toString() => details == null ? message : '$message\n\n$details';
 }
 
 /// No-op implementation wired when the user never signed in (or
@@ -86,6 +116,9 @@ class NoopTrackerBackupService extends TrackerBackupService {
   bool get isBusy => false;
 
   @override
+  String? get lastPushErrorDetails => null;
+
+  @override
   Future<bool> signIn() async => false;
 
   @override
@@ -96,6 +129,9 @@ class NoopTrackerBackupService extends TrackerBackupService {
 
   @override
   Future<bool> pushSnapshot(List<Tracker> trackers) async => false;
+
+  @override
+  Future<bool> backupNow(List<Tracker> trackers) async => false;
 
   @override
   Future<List<Tracker>?> pullSnapshot() async => null;
